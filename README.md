@@ -59,6 +59,19 @@ Una solución **todo-en-uno** con interfaz web intuitiva para gestionar túneles
 
 > **¡No se preocupe por otras dependencias!** El script de instalación se encarga de todas ellas automáticamente.
 
+## 🚀 Preparación del sistema
+
+Si estás trabajando con un servidor Ubuntu recién instalado, es posible que necesites actualizar el sistema e instalar herramientas básicas:
+
+```bash
+# Actualizar repositorios y paquetes del sistema
+sudo apt update
+sudo apt upgrade -y
+
+# Instalar curl (necesario para la descarga del instalador)
+sudo apt install curl -y
+```
+
 ## 🚀 Instalación en 3 sencillos pasos
 
 <div class="installation-steps">
@@ -249,6 +262,14 @@ sudo ./update.sh
 ### Problemas con la Instalación
 
 Si encuentra problemas durante la instalación, revise los siguientes casos comunes:
+
+0. **Servidor Ubuntu Mínimo Sin Herramientas Básicas**:
+   Si estás utilizando una instalación mínima de Ubuntu que no incluye herramientas básicas como curl:
+   ```bash
+   # Instalar herramientas básicas
+   sudo apt update
+   sudo apt install -y curl wget git software-properties-common gnupg ca-certificates
+   ```
 
 1. **Error de conexión durante la actualización de repositorios**:
    ```bash
