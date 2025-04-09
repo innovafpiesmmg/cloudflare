@@ -1,6 +1,33 @@
 {% extends 'layout.html' %}
 
 {% block content %}
+<!-- Modal de instalación en progreso -->
+<div class="modal fade" id="instalacionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="instalacionModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="instalacionModalLabel">Instalación en progreso</h5>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-3">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Instalando...</span>
+          </div>
+        </div>
+        <p>La instalación de CloudFlared está en progreso. Este proceso puede tardar varios minutos dependiendo de la velocidad de su conexión a Internet y del rendimiento del servidor.</p>
+        <div class="progress mt-3">
+          <div id="installation-progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+        </div>
+        <p class="mt-3"><small id="installation-status">Iniciando instalación...</small></p>
+        <p class="mt-3"><small id="installation-time">Tiempo transcurrido: 0 segundos</small></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="close-modal-btn" disabled>Cerrar</button>
+        <a href="{{ url_for('instalacion') }}" class="btn btn-primary d-none" id="refresh-page-btn">Actualizar página</a>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="row">
     <div class="col-12">
         <h1 class="mb-4"><i class="fas fa-download"></i> Instalación de CloudFlare Tunnel</h1>
@@ -139,4 +166,169 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Referencias a elementos del DOM
+        const installBtn = document.getElementById('install-cloudflared-btn');
+        const installForm = installBtn ? installBtn.closest('form') : null;
+        const instalacionModal = new bootstrap.Modal(document.getElementById('instalacionModal'), {
+            keyboard: false,
+            backdrop: 'static'
+        });
+        
+        // Variables para monitorizar la instalación
+        let checkInterval = null;
+        let startTime = Date.now();
+        let progress = 0;
+        let maxTime = 10 * 60 * 1000; // 10 minutos en milisegundos
+        
+        // Función para formatear el tiempo transcurrido
+        function formatTime(milliseconds) {
+            const seconds = Math.floor(milliseconds / 1000);
+            if (seconds < 60) {
+                return `${seconds} segundos`;
+            } else {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return `${minutes} minutos y ${remainingSeconds} segundos`;
+            }
+        }
+        
+        // Función para actualizar el tiempo transcurrido
+        function updateElapsedTime() {
+            const elapsedTime = Date.now() - startTime;
+            document.getElementById('installation-time').textContent = `Tiempo transcurrido: ${formatTime(elapsedTime)}`;
+            
+            // Actualizar barra de progreso (simulación basada en tiempo)
+            // Asumimos que la instalación toma entre 3-5 minutos
+            const progressPercent = Math.min(Math.floor((elapsedTime / maxTime) * 100), 95);
+            document.getElementById('installation-progress').style.width = `${progressPercent}%`;
+            document.getElementById('installation-progress').setAttribute('aria-valuenow', progressPercent);
+        }
+        
+        // Función para comprobar el estado de la instalación
+        function checkInstallationStatus() {
+            fetch('/estado-instalacion')
+                .then(response => response.json())
+                .then(data => {
+                    // Actualizar el estado en el modal
+                    let statusText = 'Instalando CloudFlared...';
+                    let statusClass = 'text-primary';
+                    
+                    if (data.instalado) {
+                        // Instalación completada con éxito
+                        statusText = `¡Instalación completada! Versión: ${data.version}`;
+                        statusClass = 'text-success';
+                        
+                        // Actualizar barra de progreso al 100%
+                        document.getElementById('installation-progress').style.width = '100%';
+                        document.getElementById('installation-progress').setAttribute('aria-valuenow', 100);
+                        document.getElementById('installation-progress').classList.remove('progress-bar-animated');
+                        
+                        // Detener el intervalo
+                        clearInterval(checkInterval);
+                        
+                        // Habilitar botón para actualizar la página
+                        document.getElementById('refresh-page-btn').classList.remove('d-none');
+                        document.getElementById('close-modal-btn').disabled = false;
+                        
+                        // Cambiar spinner por icono de éxito
+                        const spinner = document.querySelector('.modal-body .spinner-border');
+                        spinner.classList.remove('spinner-border', 'text-primary');
+                        spinner.innerHTML = '<i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>';
+                        
+                    } else {
+                        // La instalación sigue en progreso
+                        switch (data.estado) {
+                            case 'iniciada':
+                                statusText = 'Iniciando instalación...';
+                                break;
+                            case 'cloudflared':
+                                statusText = 'Descargando CloudFlared...';
+                                break;
+                            case 'en_progreso':
+                                statusText = `Instalando CloudFlared... (${data.tiempo_transcurrido}s)`;
+                                break;
+                            case 'error_dependencias':
+                                statusText = 'Error al instalar dependencias necesarias';
+                                statusClass = 'text-danger';
+                                clearInterval(checkInterval);
+                                document.getElementById('close-modal-btn').disabled = false;
+                                break;
+                            case 'error':
+                                statusText = 'Error durante la instalación';
+                                statusClass = 'text-danger';
+                                clearInterval(checkInterval);
+                                document.getElementById('close-modal-btn').disabled = false;
+                                break;
+                            case 'timeout':
+                                statusText = 'La instalación está tardando demasiado. Puede cerrar esta ventana y verificar más tarde.';
+                                statusClass = 'text-warning';
+                                clearInterval(checkInterval);
+                                document.getElementById('close-modal-btn').disabled = false;
+                                break;
+                            default:
+                                statusText = `Estado: ${data.estado}`;
+                        }
+                    }
+                    
+                    // Actualizar texto de estado
+                    document.getElementById('installation-status').textContent = statusText;
+                    document.getElementById('installation-status').className = statusClass;
+                    
+                    // Actualizar tiempo transcurrido
+                    updateElapsedTime();
+                })
+                .catch(error => {
+                    console.error('Error al verificar estado:', error);
+                    document.getElementById('installation-status').textContent = 'Error al verificar estado de instalación';
+                    document.getElementById('installation-status').className = 'text-danger';
+                });
+        }
+        
+        // Manejar envío del formulario de instalación
+        if (installForm) {
+            installForm.addEventListener('submit', function(e) {
+                // Mostrar spinner y deshabilitar botón
+                installBtn.disabled = true;
+                installBtn.querySelector('.spinner-border').classList.remove('d-none');
+                installBtn.querySelector('.btn-text').textContent = 'Instalando...';
+                
+                // Reiniciar contadores
+                startTime = Date.now();
+                progress = 0;
+                
+                // Mostrar modal después de enviar el formulario
+                setTimeout(() => {
+                    instalacionModal.show();
+                    
+                    // Iniciar verificación periódica
+                    checkInstallationStatus();
+                    checkInterval = setInterval(checkInstallationStatus, 3000);
+                }, 1000);
+            });
+        }
+        
+        // Verificar si hay una instalación en curso
+        fetch('/estado-instalacion')
+            .then(response => response.json())
+            .then(data => {
+                if (data.estado && data.estado !== 'desconocido' && !data.instalado) {
+                    // Hay una instalación en curso, mostrar modal
+                    startTime = Date.now() - (data.tiempo_transcurrido * 1000);
+                    instalacionModal.show();
+                    
+                    // Iniciar verificación periódica
+                    checkInstallationStatus();
+                    checkInterval = setInterval(checkInstallationStatus, 3000);
+                }
+            })
+            .catch(error => {
+                console.error('Error al verificar estado inicial:', error);
+            });
+    });
+</script>
 {% endblock %}

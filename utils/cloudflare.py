@@ -37,33 +37,145 @@ def get_cloudflared_version():
 
 def install_cloudflared():
     """Instalar cloudflared"""
-    try:
-        # Descargar el paquete más reciente para Ubuntu/Debian
-        logger.info("Descargando cloudflared...")
-        curl_result = subprocess.run([
-            "curl", "-L", "--output", "/tmp/cloudflared.deb",
-            "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb"
-        ], capture_output=True, check=True)
-        
-        # Instalar el paquete
-        logger.info("Instalando cloudflared...")
-        dpkg_result = subprocess.run([
-            "sudo", "dpkg", "-i", "/tmp/cloudflared.deb"
-        ], capture_output=True, check=True)
-        
-        # Crear directorios de configuración si no existen
-        if not os.path.exists(CLOUDFLARED_CONFIG_DIR):
-            os.makedirs(CLOUDFLARED_CONFIG_DIR, exist_ok=True)
-        
-        logger.info("Cloudflared instalado correctamente.")
+    # Crear directorios de configuración si no existen
+    if not os.path.exists(CLOUDFLARED_CONFIG_DIR):
+        os.makedirs(CLOUDFLARED_CONFIG_DIR, exist_ok=True)
+    
+    # Intentar primero el método principal (paquete DEB)
+    if _install_cloudflared_deb():
+        logger.info("Cloudflared instalado correctamente mediante paquete DEB.")
         return True
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error al instalar cloudflared: {str(e)}")
-        logger.error(f"Stdout: {e.stdout}")
-        logger.error(f"Stderr: {e.stderr}")
-        return False
+    
+    # Si falla el método principal, intentar el binario directo
+    logger.warning("Instalación mediante paquete DEB falló, intentando método alternativo...")
+    if _install_cloudflared_binary():
+        logger.info("Cloudflared instalado correctamente mediante binario directo.")
+        return True
+    
+    # Si todo falla, devolver error
+    logger.error("Todos los métodos de instalación de cloudflared fallaron.")
+    return False
+
+def _install_cloudflared_deb():
+    """Método principal: instalar cloudflared mediante paquete DEB"""
+    try:
+        # Descargar el paquete más reciente para Ubuntu/Debian con timeout
+        logger.info("Descargando cloudflared (método DEB)...")
+        curl_cmd = [
+            "curl", "-L", "--connect-timeout", "30", "--max-time", "120",
+            "--output", "/tmp/cloudflared.deb",
+            "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb"
+        ]
+        
+        # Ejecutar con timeout
+        curl_process = subprocess.Popen(curl_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            stdout, stderr = curl_process.communicate(timeout=180)  # 3 minutos como máximo
+            if curl_process.returncode != 0:
+                logger.error(f"Error al descargar: {stderr.decode() if stderr else 'Desconocido'}")
+                return False
+        except subprocess.TimeoutExpired:
+            curl_process.kill()
+            logger.error("Timeout al descargar cloudflared.")
+            return False
+        
+        # Verificar que el archivo se descargó correctamente
+        if not os.path.exists("/tmp/cloudflared.deb") or os.path.getsize("/tmp/cloudflared.deb") < 1000:
+            logger.error("El archivo descargado está vacío o es demasiado pequeño.")
+            return False
+        
+        # Instalar el paquete con timeout
+        logger.info("Instalando cloudflared mediante dpkg...")
+        dpkg_cmd = ["sudo", "dpkg", "-i", "/tmp/cloudflared.deb"]
+        
+        dpkg_process = subprocess.Popen(dpkg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            stdout, stderr = dpkg_process.communicate(timeout=120)  # 2 minutos como máximo
+            if dpkg_process.returncode != 0:
+                logger.error(f"Error al instalar: {stderr.decode() if stderr else 'Desconocido'}")
+                
+                # Intentar solucionar dependencias
+                logger.info("Intentando solucionar dependencias...")
+                fix_process = subprocess.run(["sudo", "apt-get", "install", "-f", "-y"], 
+                                             capture_output=True, timeout=120)
+                if fix_process.returncode != 0:
+                    logger.error("No se pudieron solucionar las dependencias.")
+                    return False
+                
+                # Volver a intentar la instalación
+                retry_process = subprocess.run(dpkg_cmd, capture_output=True, timeout=120)
+                if retry_process.returncode != 0:
+                    logger.error("Falló el segundo intento de instalación.")
+                    return False
+        except subprocess.TimeoutExpired:
+            dpkg_process.kill()
+            logger.error("Timeout al instalar cloudflared.")
+            return False
+        
+        # Verificar que cloudflared se instaló correctamente
+        verify_cmd = ["which", "cloudflared"]
+        verify_process = subprocess.run(verify_cmd, capture_output=True, timeout=10)
+        if verify_process.returncode != 0:
+            logger.error("No se pudo verificar la instalación de cloudflared.")
+            return False
+        
+        logger.info("Cloudflared instalado correctamente mediante paquete DEB.")
+        return True
+        
     except Exception as e:
-        logger.error(f"Error al instalar cloudflared: {str(e)}")
+        logger.error(f"Error durante la instalación de cloudflared (método DEB): {str(e)}")
+        return False
+
+def _install_cloudflared_binary():
+    """Método alternativo: instalar cloudflared como binario directo"""
+    try:
+        # Descargar el binario directamente
+        logger.info("Descargando cloudflared (método binario)...")
+        curl_cmd = [
+            "curl", "-L", "--connect-timeout", "30", "--max-time", "120",
+            "--output", "/usr/local/bin/cloudflared",
+            "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+        ]
+        
+        # Ejecutar con timeout
+        curl_process = subprocess.Popen(curl_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            stdout, stderr = curl_process.communicate(timeout=180)
+            if curl_process.returncode != 0:
+                logger.error(f"Error al descargar binario: {stderr.decode() if stderr else 'Desconocido'}")
+                return False
+        except subprocess.TimeoutExpired:
+            curl_process.kill()
+            logger.error("Timeout al descargar binario cloudflared.")
+            return False
+        
+        # Dar permisos de ejecución
+        logger.info("Dando permisos de ejecución...")
+        chmod_cmd = ["sudo", "chmod", "+x", "/usr/local/bin/cloudflared"]
+        chmod_process = subprocess.run(chmod_cmd, capture_output=True, timeout=10)
+        if chmod_process.returncode != 0:
+            logger.error("Error al dar permisos de ejecución.")
+            return False
+        
+        # Verificar que cloudflared se instaló correctamente
+        verify_cmd = ["which", "cloudflared"]
+        verify_process = subprocess.run(verify_cmd, capture_output=True, timeout=10)
+        if verify_process.returncode != 0:
+            logger.error("No se pudo verificar la instalación binaria de cloudflared.")
+            return False
+        
+        # Crear enlace simbólico si es necesario
+        if not os.path.exists("/usr/bin/cloudflared"):
+            try:
+                os.symlink("/usr/local/bin/cloudflared", "/usr/bin/cloudflared")
+            except Exception as e:
+                logger.warning(f"No se pudo crear enlace simbólico: {str(e)}")
+        
+        logger.info("Cloudflared instalado correctamente mediante binario directo.")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error durante la instalación de cloudflared (método binario): {str(e)}")
         return False
 
 def get_tunnels_list():

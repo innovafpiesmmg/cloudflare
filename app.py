@@ -122,22 +122,96 @@ def instalacion():
 @app.route('/instalar-cloudflared', methods=['POST'])
 def instalar_cloudflared():
     try:
+        # Crear sesión para seguimiento de estado de instalación
+        session['instalacion_estado'] = 'iniciada'
+        session['instalacion_tiempo'] = time.time()
+        
         # Instalar dependencias primero
+        app.logger.info("Iniciando instalación de dependencias...")
         install_result_deps = install_dependencies()
         
-        # Instalar cloudflared
-        install_result = install_cloudflared()
+        if not install_result_deps:
+            flash('Error al instalar dependencias necesarias. Revisar logs del sistema.', 'danger')
+            session['instalacion_estado'] = 'error_dependencias'
+            return redirect(url_for('instalacion'))
         
-        if install_result:
-            flash('CloudFlared ha sido instalado correctamente.', 'success')
-        else:
-            flash('Error al instalar CloudFlared.', 'danger')
+        # Instalar cloudflared con timeout
+        app.logger.info("Iniciando instalación de CloudFlared...")
+        session['instalacion_estado'] = 'cloudflared'
+        
+        # La instalación puede tardar, crear un thread para no bloquear la respuesta
+        import threading
+        from queue import Queue
+        
+        result_queue = Queue()
+        def install_thread():
+            try:
+                result = install_cloudflared()
+                result_queue.put(result)
+            except Exception as e:
+                app.logger.error(f"Error en thread de instalación: {str(e)}")
+                result_queue.put(False)
+        
+        # Iniciar thread de instalación
+        install_thread = threading.Thread(target=install_thread)
+        install_thread.daemon = True
+        install_thread.start()
+        
+        # Esperar resultado con timeout (10 segundos para la respuesta web)
+        try:
+            # Esperar brevemente para dar tiempo a que comience la instalación
+            # pero no demasiado para evitar que se bloquee la interfaz
+            install_thread.join(timeout=2.0)
             
-        return redirect(url_for('instalacion'))
+            # Establecer mensaje para la interfaz
+            flash('La instalación de CloudFlared está en progreso. Por favor, espere unos minutos y refresque la página.', 'info')
+            flash('Si la instalación tarda más de 5 minutos, verifique los logs del sistema.', 'warning')
+            
+            # Guardar en sesión para mostrar progreso
+            session['instalacion_estado'] = 'en_progreso'
+            
+            return redirect(url_for('instalacion'))
+        except Exception as e:
+            flash(f'La instalación continúa en segundo plano: {str(e)}', 'warning')
+            return redirect(url_for('instalacion'))
+        
     except Exception as e:
         flash(f'Error durante la instalación: {str(e)}', 'danger')
         app.logger.error(f"Error durante la instalación: {str(e)}")
+        session['instalacion_estado'] = 'error'
         return redirect(url_for('instalacion'))
+
+# Ruta para verificar estado de instalación
+@app.route('/estado-instalacion', methods=['GET'])
+def estado_instalacion():
+    # Verificar si cloudflared está instalado
+    cloudflared_installed = check_cloudflared_installed()
+    
+    if cloudflared_installed:
+        version = get_cloudflared_version()
+        session.pop('instalacion_estado', None)
+        session.pop('instalacion_tiempo', None)
+        return jsonify({
+            'estado': 'completado',
+            'instalado': True,
+            'version': version
+        })
+    
+    # Verificar si hay una instalación en curso
+    estado = session.get('instalacion_estado', 'desconocido')
+    tiempo_inicio = session.get('instalacion_tiempo', 0)
+    tiempo_transcurrido = time.time() - tiempo_inicio if tiempo_inicio else 0
+    
+    # Si ha pasado demasiado tiempo (más de 10 minutos), considerar error
+    if tiempo_inicio and tiempo_transcurrido > 600:
+        session['instalacion_estado'] = 'timeout'
+        estado = 'timeout'
+    
+    return jsonify({
+        'estado': estado,
+        'instalado': cloudflared_installed,
+        'tiempo_transcurrido': round(tiempo_transcurrido) if tiempo_inicio else 0
+    })
 
 # Ruta para la configuración de túneles
 @app.route('/configuracion')
