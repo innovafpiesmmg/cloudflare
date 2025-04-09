@@ -48,15 +48,41 @@ print_status "Creando directorio de instalación en $INSTALL_DIR"
 mkdir -p $INSTALL_DIR
 cd $INSTALL_DIR
 
-# Verificar e instalar dependencias
-print_status "Verificando e instalando dependencias..."
+# Actualizar sistema y repositorios
+print_status "Actualizando repositorios y sistema..."
 apt-get update
-apt-get install -y python3 python3-pip git curl sudo systemd python3-venv
+if [ $? -ne 0 ]; then
+    print_error "Error al actualizar repositorios. Comprobando conectividad..."
+    if ! ping -c 1 google.com &> /dev/null; then
+        print_error "No hay conexión a Internet. Verifica la conectividad de red."
+        exit 1
+    else
+        print_warning "Hay conectividad pero falló la actualización. Intentando continuar..."
+    fi
+fi
+
+# Instalar dependencias esenciales primero
+print_status "Instalando dependencias esenciales..."
+apt-get install -y apt-utils dialog apt-transport-https ca-certificates software-properties-common gnupg2 curl wget
+
+# Verificar e instalar dependencias principales
+print_status "Instalando dependencias principales..."
+apt-get install -y python3 python3-pip python3-venv python3-dev \
+                   git curl wget sudo systemd lsb-release \
+                   build-essential libssl-dev libffi-dev
 
 # Verificar si ocurrió algún error
 if [ $? -ne 0 ]; then
-    print_error "Error al instalar dependencias. Por favor, verifica la conectividad a Internet y los permisos."
-    exit 1
+    print_error "Error al instalar dependencias principales."
+    print_warning "Intentando instalar dependencias críticas mínimas..."
+    apt-get install -y python3 python3-pip curl wget
+    
+    if [ $? -ne 0 ]; then
+        print_error "No se pudieron instalar las dependencias críticas. Abortando instalación."
+        exit 1
+    else
+        print_warning "Se instalaron las dependencias mínimas. Algunas funcionalidades podrían estar limitadas."
+    fi
 fi
 
 # Crear entorno virtual de Python
@@ -75,7 +101,40 @@ fi
 
 # Instalar requisitos de Python
 print_status "Instalando requisitos de Python..."
-pip install flask pyyaml psutil requests pillow gunicorn
+pip install --upgrade pip
+pip install setuptools wheel
+
+# Instalar dependencias en etapas para mejor manejo de errores
+print_status "Instalando dependencias básicas de Python..."
+pip install flask pyyaml requests
+if [ $? -ne 0 ]; then
+    print_error "Error al instalar dependencias básicas de Python."
+    print_warning "Intentando instalar Flask con opciones alternativas..."
+    pip install --no-cache-dir flask
+    if [ $? -ne 0 ]; then
+        print_error "No se pudo instalar Flask. El aplicativo no funcionará correctamente."
+        exit 1
+    fi
+fi
+
+print_status "Instalando dependencias adicionales de Python..."
+pip install psutil pillow gunicorn
+if [ $? -ne 0 ]; then
+    print_warning "Algunas dependencias adicionales no pudieron instalarse."
+    print_warning "El aplicativo podría funcionar con funcionalidad limitada."
+    
+    # Instalar gunicorn que es crítico para el servidor web
+    pip install gunicorn
+    if [ $? -ne 0 ]; then
+        print_error "No se pudo instalar gunicorn. Intentando método alternativo..."
+        python3 -m pip install gunicorn
+        
+        if [ $? -ne 0 ]; then
+            print_error "No se pudo instalar gunicorn. El aplicativo no funcionará correctamente."
+            exit 1
+        fi
+    fi
+fi
 
 # Crear archivo de servicio systemd
 SERVICE_FILE="/etc/systemd/system/gestor-tuneles-cloudflare.service"

@@ -43,10 +43,14 @@ sudo ./install.sh
 ```
 
 La instalación configurará automáticamente:
-- La aplicación web en el puerto 5000
-- Un servicio systemd para el arranque automático
-- El sistema de monitoreo y alertas
-- Los permisos necesarios para el funcionamiento seguro
+- Actualiza el sistema y repositorios
+- Instala todas las dependencias necesarias (Python, librerías, herramientas)
+- Configura la aplicación web en el puerto 5000
+- Configura servicios systemd para arranque automático
+- Instala el sistema de monitoreo y alertas
+- Configura los permisos necesarios para el funcionamiento seguro
+
+El script está diseñado para funcionar incluso en servidores Ubuntu recién instalados con configuración mínima.
 
 ## Configuración para producción
 
@@ -177,6 +181,59 @@ chmod +x update.sh
 
 # Ejecutar como root o con sudo
 sudo ./update.sh
+```
+
+## Solución de Problemas
+
+### Problemas con la Instalación
+
+Si encuentra problemas durante la instalación, revise los siguientes casos comunes:
+
+1. **Error de conexión durante la actualización de repositorios**:
+   ```bash
+   # Verificar conectividad a Internet
+   ping -c 3 google.com
+   
+   # Verificar configuración DNS
+   cat /etc/resolv.conf
+   ```
+
+2. **Error al instalar dependencias de Python**:
+   ```bash
+   # Instalar manualmente las dependencias críticas
+   apt-get install -y python3-pip python3-dev build-essential
+   python3 -m pip install --upgrade pip
+   python3 -m pip install flask gunicorn
+   ```
+
+3. **El servicio no inicia correctamente**:
+   ```bash
+   # Verificar logs detallados
+   journalctl -u gestor-tuneles-cloudflare -n 50
+   
+   # Verificar archivos de configuración
+   ls -la /opt/gestor-tuneles-cloudflare/
+   ```
+
+4. **Puerto 5000 ya en uso**:
+   ```bash
+   # Verificar qué está usando el puerto 5000
+   lsof -i :5000
+   
+   # Editar el archivo de servicio para usar otro puerto
+   sudo systemctl edit gestor-tuneles-cloudflare
+   # Añadir: ExecStart=/opt/gestor-tuneles-cloudflare/venv/bin/gunicorn --bind 0.0.0.0:5001 --reuse-port --reload main:app
+   ```
+
+### Actualización Manual
+
+Si necesita actualizar manualmente:
+
+```bash
+cd /opt/gestor-tuneles-cloudflare
+git pull origin main
+pip install -r requirements.txt
+systemctl restart gestor-tuneles-cloudflare
 ```
 
 ## Soporte y Contribuciones
