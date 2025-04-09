@@ -311,7 +311,16 @@ def configurar_servicio_tunel(nombre_tunel):
     try:
         resultado = configure_tunnel_service(nombre_tunel)
         if resultado['success']:
-            flash(f'Túnel "{nombre_tunel}" configurado como servicio correctamente.', 'success')
+            # Verificar el método de configuración
+            if resultado.get('method') == 'script':
+                # Si se ha creado un script en lugar de un servicio systemd
+                flash(f'Túnel "{nombre_tunel}" configurado correctamente mediante script.', 'success')
+                flash(f'Script creado en: {resultado.get("script_path")}', 'info')
+                flash(f'Instrucciones: {resultado.get("instructions")}', 'info')
+                flash(f'Para iniciar el túnel ejecute: sudo {resultado.get("script_path")} start', 'info')
+            else:
+                # Método systemd (por defecto)
+                flash(f'Túnel "{nombre_tunel}" configurado como servicio correctamente.', 'success')
         else:
             flash(f'Error al configurar el túnel como servicio: {resultado["error"]}', 'danger')
     except Exception as e:

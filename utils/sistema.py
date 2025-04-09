@@ -17,25 +17,34 @@ def check_dependencies():
         {"name": "curl", "installed": False},
         {"name": "sudo", "installed": False},
         {"name": "python3", "installed": False},
-        {"name": "systemd", "installed": False}
+        {"name": "systemd", "installed": False, "optional": True}
     ]
     
     try:
-        # Verificar cada dependencia
+        # Verificar cada dependencia básica
         for i, dep in enumerate(dependencies):
-            result = subprocess.run(["which", dep["name"]], capture_output=True, text=True)
-            dependencies[i]["installed"] = result.returncode == 0
+            if dep["name"] != "systemd":  # Systemd requiere verificación específica
+                result = subprocess.run(["which", dep["name"]], capture_output=True, text=True)
+                dependencies[i]["installed"] = result.returncode == 0
         
         # Verificar systemd de forma específica (es un servicio, no un comando)
-        systemd_check = subprocess.run(
-            ["systemctl", "--version"], 
-            capture_output=True, 
-            text=True
-        )
-        for i, dep in enumerate(dependencies):
-            if dep["name"] == "systemd":
-                dependencies[i]["installed"] = systemd_check.returncode == 0
-                
+        try:
+            systemd_check = subprocess.run(
+                ["systemctl", "--version"], 
+                capture_output=True, 
+                text=True
+            )
+            for i, dep in enumerate(dependencies):
+                if dep["name"] == "systemd":
+                    dependencies[i]["installed"] = systemd_check.returncode == 0
+        except FileNotFoundError:
+            # Si systemctl no existe, systemd no está disponible pero es opcional
+            logger.warning("systemd no está disponible en este sistema")
+            for i, dep in enumerate(dependencies):
+                if dep["name"] == "systemd":
+                    dependencies[i]["installed"] = False
+                    dependencies[i]["mensaje"] = "No disponible en este sistema (opcional)"
+        
         return dependencies
     except Exception as e:
         logger.error(f"Error al verificar dependencias: {str(e)}")
@@ -142,10 +151,21 @@ def check_service_status(service_name):
         "exists": False,
         "active": False,
         "enabled": False,
-        "status": "Desconocido"
+        "status": "Desconocido",
+        "systemd_available": True
     }
     
+    # Verificar si systemd está disponible
     try:
+        # Comprobar si systemctl existe
+        systemctl_exists = shutil.which('systemctl') is not None
+        
+        if not systemctl_exists:
+            status["systemd_available"] = False
+            status["status"] = "Systemd no disponible"
+            logger.warning(f"No se puede verificar el servicio {service_name}: systemd no está disponible")
+            return status
+    
         # Verificar si el servicio existe
         status_result = subprocess.run(
             ["systemctl", "status", service_name],
@@ -155,6 +175,7 @@ def check_service_status(service_name):
         status["exists"] = status_result.returncode != 4  # 4 significa que el servicio no existe
         
         if not status["exists"]:
+            status["status"] = "No existe"
             return status
             
         # Verificar si está activo
@@ -179,6 +200,12 @@ def check_service_status(service_name):
         else:
             status["status"] = "Inactivo"
             
+        return status
+    except FileNotFoundError:
+        # Si systemctl no está disponible
+        status["systemd_available"] = False
+        status["status"] = "Systemd no disponible"
+        logger.warning(f"No se puede verificar el servicio {service_name}: systemd no está disponible")
         return status
     except Exception as e:
         logger.error(f"Error al verificar estado del servicio {service_name}: {str(e)}")

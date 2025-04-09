@@ -80,6 +80,11 @@
                             {{ dep.name }}
                             {% if dep.installed %}
                                 <span class="badge bg-success">Instalado</span>
+                            {% elif dep.optional %}
+                                <span class="badge bg-info">Opcional</span>
+                                {% if dep.mensaje %}
+                                <small class="text-muted d-block">{{ dep.mensaje }}</small>
+                                {% endif %}
                             {% else %}
                                 <span class="badge bg-warning">No instalado</span>
                             {% endif %}

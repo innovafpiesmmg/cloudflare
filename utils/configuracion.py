@@ -3,6 +3,7 @@ import json
 import yaml
 import logging
 import subprocess
+import shutil
 from pathlib import Path
 
 # Configurar logging
@@ -165,40 +166,49 @@ def get_available_services():
                 port_str = f":{service['port']}"
                 service["running"] = port_str in output
                 services.append(service)
-                
-        # Detectar servicios específicos mediante systemctl
-        systemctl_services = {
-            "nginx": {"name": "Nginx", "port": 80},
-            "apache2": {"name": "Apache", "port": 80},
-            "mysql": {"name": "MySQL", "port": 3306},
-            "postgresql": {"name": "PostgreSQL", "port": 5432},
-            "redis-server": {"name": "Redis", "port": 6379},
-            "mongodb": {"name": "MongoDB", "port": 27017},
-            "sshd": {"name": "SSH", "port": 22},
-            "vsftpd": {"name": "FTP", "port": 21},
-            "postfix": {"name": "SMTP", "port": 25}
-        }
         
-        for service_name, service_info in systemctl_services.items():
-            result = subprocess.run(
-                ["systemctl", "is-active", service_name],
-                capture_output=True,
-                text=True
-            )
+        # Verificar si systemd está disponible
+        systemd_available = shutil.which('systemctl') is not None
+        
+        if systemd_available:
+            # Detectar servicios específicos mediante systemctl
+            systemctl_services = {
+                "nginx": {"name": "Nginx", "port": 80},
+                "apache2": {"name": "Apache", "port": 80},
+                "mysql": {"name": "MySQL", "port": 3306},
+                "postgresql": {"name": "PostgreSQL", "port": 5432},
+                "redis-server": {"name": "Redis", "port": 6379},
+                "mongodb": {"name": "MongoDB", "port": 27017},
+                "sshd": {"name": "SSH", "port": 22},
+                "vsftpd": {"name": "FTP", "port": 21},
+                "postfix": {"name": "SMTP", "port": 25}
+            }
             
-            if result.stdout.strip() == "active":
-                # Evitar duplicados
-                if not any(s["name"] == service_info["name"] for s in services):
-                    services.append({
-                        "name": service_info["name"],
-                        "port": service_info["port"],
-                        "running": True
-                    })
-                # Actualizar estado si ya existe
-                else:
-                    for i, s in enumerate(services):
-                        if s["name"] == service_info["name"]:
-                            services[i]["running"] = True
+            for service_name, service_info in systemctl_services.items():
+                try:
+                    result = subprocess.run(
+                        ["systemctl", "is-active", service_name],
+                        capture_output=True,
+                        text=True
+                    )
+                    
+                    if result.stdout.strip() == "active":
+                        # Evitar duplicados
+                        if not any(s["name"] == service_info["name"] for s in services):
+                            services.append({
+                                "name": service_info["name"],
+                                "port": service_info["port"],
+                                "running": True
+                            })
+                        # Actualizar estado si ya existe
+                        else:
+                            for i, s in enumerate(services):
+                                if s["name"] == service_info["name"]:
+                                    services[i]["running"] = True
+                except Exception as e:
+                    # Ignorar errores individuales de servicios
+                    logger.debug(f"Error al verificar servicio {service_name}: {str(e)}")
+                    continue
                             
         return services
     except Exception as e:
@@ -242,18 +252,42 @@ def add_service_to_tunnel(tunnel_name, service_name, service_port, domain):
             
             # Reiniciar el servicio si está configurado
             service_name = f"cloudflared-{tunnel_name}"
-            restart_result = subprocess.run(
-                ["systemctl", "is-active", service_name],
-                capture_output=True,
-                text=True
-            )
             
-            if restart_result.stdout.strip() == "active":
-                subprocess.run(
-                    ["sudo", "systemctl", "restart", service_name],
-                    capture_output=True,
-                    text=True
-                )
+            # Verificar si systemd está disponible
+            systemd_available = shutil.which('systemctl') is not None
+            
+            if systemd_available:
+                # Intenta reiniciar el servicio via systemd si está activo
+                try:
+                    restart_result = subprocess.run(
+                        ["systemctl", "is-active", service_name],
+                        capture_output=True,
+                        text=True
+                    )
+                    
+                    if restart_result.stdout.strip() == "active":
+                        subprocess.run(
+                            ["sudo", "systemctl", "restart", service_name],
+                            capture_output=True,
+                            text=True
+                        )
+                        logger.info(f"Servicio {service_name} reiniciado mediante systemd")
+                except Exception as e:
+                    logger.warning(f"No se pudo reiniciar el servicio systemd: {str(e)}")
+            else:
+                # Comprobar si existe un script de inicio alternativo
+                script_path = f"/usr/local/bin/{service_name}"
+                if os.path.exists(script_path) and os.access(script_path, os.X_OK):
+                    try:
+                        # Reiniciar el túnel usando el script
+                        subprocess.run(
+                            ["sudo", script_path, "restart"],
+                            capture_output=True,
+                            text=True
+                        )
+                        logger.info(f"Servicio {service_name} reiniciado mediante script")
+                    except Exception as e:
+                        logger.warning(f"Error al reiniciar el servicio mediante script: {str(e)}")
             
             return {"success": True}
         else:
@@ -295,18 +329,42 @@ def remove_service_from_tunnel(tunnel_name, service_name):
             
             # Reiniciar el servicio si está configurado
             service_name = f"cloudflared-{tunnel_name}"
-            restart_result = subprocess.run(
-                ["systemctl", "is-active", service_name],
-                capture_output=True,
-                text=True
-            )
             
-            if restart_result.stdout.strip() == "active":
-                subprocess.run(
-                    ["sudo", "systemctl", "restart", service_name],
-                    capture_output=True,
-                    text=True
-                )
+            # Verificar si systemd está disponible
+            systemd_available = shutil.which('systemctl') is not None
+            
+            if systemd_available:
+                # Intenta reiniciar el servicio via systemd si está activo
+                try:
+                    restart_result = subprocess.run(
+                        ["systemctl", "is-active", service_name],
+                        capture_output=True,
+                        text=True
+                    )
+                    
+                    if restart_result.stdout.strip() == "active":
+                        subprocess.run(
+                            ["sudo", "systemctl", "restart", service_name],
+                            capture_output=True,
+                            text=True
+                        )
+                        logger.info(f"Servicio {service_name} reiniciado mediante systemd")
+                except Exception as e:
+                    logger.warning(f"No se pudo reiniciar el servicio systemd: {str(e)}")
+            else:
+                # Comprobar si existe un script de inicio alternativo
+                script_path = f"/usr/local/bin/{service_name}"
+                if os.path.exists(script_path) and os.access(script_path, os.X_OK):
+                    try:
+                        # Reiniciar el túnel usando el script
+                        subprocess.run(
+                            ["sudo", script_path, "restart"],
+                            capture_output=True,
+                            text=True
+                        )
+                        logger.info(f"Servicio {service_name} reiniciado mediante script")
+                    except Exception as e:
+                        logger.warning(f"Error al reiniciar el servicio mediante script: {str(e)}")
             
             return {"success": True}
         else:

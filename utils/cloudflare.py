@@ -426,8 +426,12 @@ def configure_tunnel_service(tunnel_name):
         if not tunnel_id:
             return {"success": False, "error": f"No se encontró el túnel {tunnel_name}"}
         
-        # Crear el archivo de servicio systemd
-        service_content = f"""[Unit]
+        # Verificar si systemd está disponible
+        systemd_available = shutil.which('systemctl') is not None
+        
+        if systemd_available:
+            # Crear el archivo de servicio systemd
+            service_content = f"""[Unit]
 Description=Cloudflare Tunnel for {tunnel_name}
 After=network.target
 
@@ -442,16 +446,107 @@ TimeoutStartSec=0
 [Install]
 WantedBy=multi-user.target
 """
-        
-        service_path = f"{SYSTEMD_DIR}/cloudflared-{tunnel_name}.service"
-        with open(service_path, "w") as f:
-            f.write(service_content)
-        
-        # Recargar systemd y habilitar el servicio
-        subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
-        subprocess.run(["sudo", "systemctl", "enable", f"cloudflared-{tunnel_name}"], check=True)
-        
-        return {"success": True}
+            
+            service_path = f"{SYSTEMD_DIR}/cloudflared-{tunnel_name}.service"
+            with open(service_path, "w") as f:
+                f.write(service_content)
+            
+            # Recargar systemd y habilitar el servicio
+            subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+            subprocess.run(["sudo", "systemctl", "enable", f"cloudflared-{tunnel_name}"], check=True)
+            
+            return {"success": True, "method": "systemd"}
+        else:
+            # Si systemd no está disponible, generar un script de inicio
+            # que se puede usar manualmente o configurarse con otros servicios
+            
+            # Crear directorio para scripts si no existe
+            script_dir = "/usr/local/bin"
+            if not os.path.exists(script_dir):
+                os.makedirs(script_dir, exist_ok=True)
+            
+            # Crear script de inicio
+            script_content = f"""#!/bin/bash
+# Script para iniciar el túnel CloudFlare {tunnel_name}
+# Uso:
+#   Para iniciar: {script_dir}/cloudflared-{tunnel_name} start
+#   Para detener: {script_dir}/cloudflared-{tunnel_name} stop
+
+TUNNEL_NAME="{tunnel_name}"
+TUNNEL_ID="{tunnel_id}"
+PID_FILE="/tmp/cloudflared-{tunnel_name}.pid"
+
+start_tunnel() {{
+    echo "Iniciando túnel $TUNNEL_NAME..."
+    nohup cloudflared tunnel run --no-autoupdate $TUNNEL_NAME > /var/log/cloudflared-$TUNNEL_NAME.log 2>&1 &
+    echo $! > $PID_FILE
+    echo "Túnel iniciado con PID $(cat $PID_FILE)"
+}}
+
+stop_tunnel() {{
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat $PID_FILE)
+        echo "Deteniendo túnel $TUNNEL_NAME (PID: $PID)..."
+        kill $PID
+        rm $PID_FILE
+        echo "Túnel detenido"
+    else
+        echo "El túnel no está en ejecución"
+    fi
+}}
+
+status_tunnel() {{
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat $PID_FILE)
+        if ps -p $PID > /dev/null; then
+            echo "El túnel $TUNNEL_NAME está en ejecución (PID: $PID)"
+        else
+            echo "El túnel $TUNNEL_NAME no está en ejecución (PID antiguo: $PID)"
+            rm $PID_FILE
+        fi
+    else
+        echo "El túnel $TUNNEL_NAME no está en ejecución"
+    fi
+}}
+
+case "$1" in
+    start)
+        start_tunnel
+        ;;
+    stop)
+        stop_tunnel
+        ;;
+    restart)
+        stop_tunnel
+        sleep 2
+        start_tunnel
+        ;;
+    status)
+        status_tunnel
+        ;;
+    *)
+        echo "Uso: $0 {{start|stop|restart|status}}"
+        exit 1
+        ;;
+esac
+
+exit 0
+"""
+            
+            script_path = f"{script_dir}/cloudflared-{tunnel_name}"
+            with open(script_path, "w") as f:
+                f.write(script_content)
+            
+            # Hacer el script ejecutable
+            os.chmod(script_path, 0o755)
+            
+            return {
+                "success": True, 
+                "method": "script", 
+                "script_path": script_path, 
+                "instructions": "Systemd no está disponible. Se ha creado un script ejecutable para gestionar manualmente el túnel."
+            }
+            
     except Exception as e:
         logger.error(f"Error al configurar servicio para túnel {tunnel_name}: {str(e)}")
         return {"success": False, "error": str(e)}
