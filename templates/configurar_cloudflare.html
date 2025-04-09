@@ -1,0 +1,98 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Configuración de Cloudflare API</h1>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Configura tus credenciales de Cloudflare para poder crear y gestionar túneles Zero Trust desde esta aplicación.
+        </div>
+
+        {% if cloudflare_configured %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> <strong>API de Cloudflare configurada</strong>
+            <p>La API de Cloudflare está configurada correctamente.</p>
+            
+            <div class="mt-2">
+                <form method="POST" action="{{ url_for('probar_conexion_cloudflare') }}" class="d-inline">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-network-wired"></i> Probar conexión
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('eliminar_configuracion_cloudflare') }}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar la configuración de Cloudflare?');">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Eliminar configuración
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-key"></i> Configurar API de Cloudflare
+            </div>
+            <div class="card-body">
+                <p class="mb-4">Para obtener tu API key de Cloudflare:</p>
+                <ol>
+                    <li>Inicia sesión en tu cuenta de Cloudflare (https://dash.cloudflare.com/)</li>
+                    <li>Ve a "Mi perfil" > "API Tokens"</li>
+                    <li>Puedes usar la "Global API Key" para un acceso completo</li>
+                    <li>O crea un nuevo token con permisos para administrar túneles y DNS</li>
+                </ol>
+                
+                <form method="POST" action="{{ url_for('guardar_configuracion_cloudflare') }}" class="mt-4">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Correo electrónico</label>
+                        <input type="email" class="form-control" id="email" name="email" required placeholder="Correo asociado a tu cuenta de Cloudflare">
+                    </div>
+                    <div class="mb-3">
+                        <label for="api_key" class="form-label">API Key</label>
+                        <input type="password" class="form-control" id="api_key" name="api_key" required placeholder="Tu Global API Key o API Token">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar configuración
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-question-circle"></i> Ayuda y recursos
+            </div>
+            <div class="card-body">
+                <h5>¿Por qué configurar la API de Cloudflare?</h5>
+                <p>Configurar la API de Cloudflare te permite:</p>
+                <ul>
+                    <li>Crear y administrar túneles desde esta interfaz</li>
+                    <li>Conectar dominios a tus servicios automáticamente</li>
+                    <li>Gestionar tu configuración de Zero Trust</li>
+                    <li>Obtener estadísticas y métricas avanzadas</li>
+                </ul>
+                
+                <h5 class="mt-3">Recursos adicionales</h5>
+                <ul>
+                    <li><a href="https://developers.cloudflare.com/api/" target="_blank">Documentación de la API de Cloudflare</a></li>
+                    <li><a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide/" target="_blank">Guía de túneles Cloudflare</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

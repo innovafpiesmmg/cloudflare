@@ -413,6 +413,290 @@ fi
 # Variable para entorno de producción
 grep -q "FLASK_ENV=production" /etc/environment || echo "FLASK_ENV=production" >> /etc/environment
 
+# Configuración inicial de Cloudflare (opcional)
+print_status "====================================================="
+print_status "  Configuración inicial de Cloudflare  "
+print_status "====================================================="
+print_status "Esta configuración es opcional. Puedes saltarla y configurar Cloudflare más tarde."
+print_status "Si tienes una API key de Cloudflare, puedes configurarla ahora para que la aplicación"
+print_status "pueda empezar a funcionar con tu cuenta de Cloudflare de inmediato."
+print_status ""
+
+read -p "¿Deseas configurar la API key de Cloudflare ahora? (s/n): " setup_cloudflare
+if [ "$setup_cloudflare" = "s" ]; then
+    # Crear archivo para almacenar la API key de forma segura
+    CF_CONFIG_FILE="$INSTALL_DIR/config/cloudflare.json"
+    
+    print_status "Para obtener tu API key de Cloudflare:"
+    print_status "1. Inicia sesión en tu cuenta de Cloudflare (https://dash.cloudflare.com/)"
+    print_status "2. Ve a 'Mi perfil' > 'API Tokens'"
+    print_status "3. Crea un nuevo token con permisos para administrar túneles y DNS"
+    print_status "   o usa la opción 'Global API Key' para un acceso completo"
+    print_status ""
+    
+    read -p "Ingresa tu API key de Cloudflare: " cf_api_key
+    read -p "Ingresa el correo electrónico asociado a tu cuenta de Cloudflare: " cf_email
+    
+    # Guardar la información de forma segura
+    cat > $CF_CONFIG_FILE << EOF
+{
+    "api_key": "$cf_api_key",
+    "email": "$cf_email",
+    "configured": true
+}
+EOF
+    
+    # Asegurar que solo root puede leer este archivo
+    chmod 600 $CF_CONFIG_FILE
+    
+    print_status "Credenciales de Cloudflare guardadas correctamente."
+    
+    # Opcionalmente configurar un túnel inicial
+    read -p "¿Deseas crear un túnel inicial para esta aplicación? (s/n): " create_tunnel
+    if [ "$create_tunnel" = "s" ]; then
+        read -p "Ingresa un nombre para el túnel: " tunnel_name
+        read -p "Ingresa el dominio para acceder a esta aplicación (ej: app.midominio.com): " app_domain
+        
+        print_status "Creando túnel inicial '$tunnel_name'..."
+        
+        # Activar entorno virtual para ejecutar Python
+        source $INSTALL_DIR/venv/bin/activate
+        
+        # Crear un script temporal para la configuración inicial
+        SETUP_SCRIPT="$INSTALL_DIR/setup_initial_tunnel.py"
+        
+        cat > $SETUP_SCRIPT << EOF
+import json
+import os
+import subprocess
+import sys
+import time
+
+# Cargar configuración
+try:
+    with open('$CF_CONFIG_FILE', 'r') as f:
+        cf_config = json.load(f)
+    
+    api_key = cf_config.get('api_key')
+    email = cf_config.get('email')
+    
+    if not api_key or not email:
+        print("Error: No se encontraron credenciales válidas de Cloudflare")
+        sys.exit(1)
+    
+    # Verificar que cloudflared está instalado
+    result = subprocess.run(['which', 'cloudflared'], capture_output=True, text=True)
+    if result.returncode != 0:
+        print("Error: cloudflared no está instalado")
+        print("Instala cloudflared primero usando la opción en la interfaz web")
+        sys.exit(1)
+    
+    # Autenticarse con Cloudflare primero
+    print("Autenticando con Cloudflare...")
+    auth_process = subprocess.run(
+        ['cloudflared', 'tunnel', 'login'],
+        capture_output=True, 
+        text=True
+    )
+    
+    if auth_process.returncode != 0:
+        print(f"Error al autenticar con Cloudflare: {auth_process.stderr}")
+        sys.exit(1)
+    
+    # Crear el túnel
+    print(f"Creando túnel '{tunnel_name}'...")
+    create_process = subprocess.run(
+        ['cloudflared', 'tunnel', 'create', '$tunnel_name'],
+        capture_output=True,
+        text=True
+    )
+    
+    if create_process.returncode != 0:
+        print(f"Error al crear el túnel: {create_process.stderr}")
+        sys.exit(1)
+    
+    tunnel_id = None
+    for line in create_process.stdout.splitlines():
+        if "Created tunnel" in line:
+            tunnel_id = line.split()[-1].strip()
+    
+    if not tunnel_id:
+        print("No se pudo obtener el ID del túnel")
+        sys.exit(1)
+    
+    print(f"Túnel creado con ID: {tunnel_id}")
+    
+    # Configurar el dominio para el túnel
+    print(f"Configurando dominio {app_domain} para el túnel...")
+    config_dir = "/etc/cloudflared/configs"
+    os.makedirs(config_dir, exist_ok=True)
+    
+    # Configurar el túnel para esta aplicación
+    tunnel_config = {
+        'tunnel_id': tunnel_id,
+        'credentials_file': f'/etc/cloudflared/{tunnel_id}.json',
+        'services': [
+            {
+                'name': 'gestor-tuneles',
+                'port': '5000',
+                'domain': '$app_domain'
+            }
+        ]
+    }
+    
+    # Guardar configuración
+    with open(f'{config_dir}/$tunnel_name.json', 'w') as f:
+        json.dump(tunnel_config, f, indent=2)
+    
+    # Generar YAML para el túnel
+    yaml_config = {
+        'tunnel': '$tunnel_name',
+        'credentials-file': f'/etc/cloudflared/{tunnel_id}.json',
+        'ingress': [
+            {
+                'hostname': '$app_domain',
+                'service': 'http://localhost:5000'
+            },
+            {
+                'service': 'http_status:404'
+            }
+        ]
+    }
+    
+    import yaml
+    with open(f'/etc/cloudflared/$tunnel_name.yml', 'w') as f:
+        yaml.dump(yaml_config, f, default_flow_style=False)
+    
+    print("Configuración del túnel completada.")
+    
+    # Intentar configurar como servicio
+    print("Configurando el túnel como servicio...")
+    if '$SYSTEMD_AVAILABLE' == 'true':
+        # Usar systemd
+        service_name = f"cloudflared-$tunnel_name"
+        service_content = f"""[Unit]
+Description=Cloudflare Tunnel for $tunnel_name
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/cloudflared tunnel run --no-autoupdate $tunnel_name
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+"""
+        
+        with open(f"/etc/systemd/system/{service_name}.service", "w") as f:
+            f.write(service_content)
+        
+        subprocess.run(['systemctl', 'daemon-reload'])
+        subprocess.run(['systemctl', 'enable', service_name])
+        subprocess.run(['systemctl', 'start', service_name])
+        print(f"Servicio {service_name} iniciado mediante systemd")
+    else:
+        # Usar script alternativo
+        script_path = f"/usr/local/bin/cloudflared-$tunnel_name"
+        script_content = f"""#!/bin/bash
+# Script para iniciar el túnel CloudFlare $tunnel_name
+# Uso:
+#   Para iniciar: {script_path} start
+#   Para detener: {script_path} stop
+
+TUNNEL_NAME="$tunnel_name"
+TUNNEL_ID="{tunnel_id}"
+PID_FILE="/tmp/cloudflared-$tunnel_name.pid"
+
+start_tunnel() {{
+    echo "Iniciando túnel $TUNNEL_NAME..."
+    nohup cloudflared tunnel run --no-autoupdate $TUNNEL_NAME > /var/log/cloudflared-$TUNNEL_NAME.log 2>&1 &
+    echo $! > $PID_FILE
+    echo "Túnel iniciado con PID $(cat $PID_FILE)"
+}}
+
+stop_tunnel() {{
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat $PID_FILE)
+        echo "Deteniendo túnel $TUNNEL_NAME (PID: $PID)..."
+        kill $PID
+        rm $PID_FILE
+        echo "Túnel detenido"
+    else
+        echo "El túnel no está en ejecución"
+    fi
+}}
+
+status_tunnel() {{
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat $PID_FILE)
+        if ps -p $PID > /dev/null; then
+            echo "El túnel $TUNNEL_NAME está en ejecución (PID: $PID)"
+        else
+            echo "El túnel $TUNNEL_NAME no está en ejecución (PID antiguo: $PID)"
+            rm $PID_FILE
+        fi
+    else
+        echo "El túnel $TUNNEL_NAME no está en ejecución"
+    fi
+}}
+
+case "$1" in
+    start)
+        start_tunnel
+        ;;
+    stop)
+        stop_tunnel
+        ;;
+    restart)
+        stop_tunnel
+        sleep 2
+        start_tunnel
+        ;;
+    status)
+        status_tunnel
+        ;;
+    *)
+        echo "Uso: $0 {{start|stop|restart|status}}"
+        exit 1
+        ;;
+esac
+
+exit 0
+"""
+        
+        with open(script_path, "w") as f:
+            f.write(script_content)
+        
+        # Hacer el script ejecutable
+        import os
+        os.chmod(script_path, 0o755)
+        
+        # Iniciar el túnel
+        subprocess.run([script_path, 'start'])
+        print(f"Túnel iniciado mediante script {script_path}")
+    
+    print("¡Felicidades! El túnel se ha configurado y debería estar funcionando.")
+    print(f"La aplicación estará disponible en https://{app_domain} en unos minutos")
+    print("(puede tardar hasta 5 minutos para que los cambios DNS se propaguen)")
+    
+except Exception as e:
+    print(f"Error durante la configuración: {str(e)}")
+    sys.exit(1)
+EOF
+
+        # Ejecutar el script
+        python3 $SETUP_SCRIPT
+        
+        # Eliminar el script temporal
+        rm $SETUP_SCRIPT
+    fi
+else
+    print_status "Configuración de Cloudflare omitida. Puedes configurarla más tarde desde la interfaz web."
+fi
+
 # Crear directorio de logs
 mkdir -p /var/log/cloudflare
 touch /var/log/cloudflare-monitor.log

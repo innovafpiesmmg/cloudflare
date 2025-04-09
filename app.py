@@ -32,6 +32,12 @@ from utils.configuracion import (
     add_service_to_tunnel,
     remove_service_from_tunnel
 )
+from utils.cloudflare_auth import (
+    is_cloudflare_configured,
+    test_cloudflare_auth,
+    save_cloudflare_config,
+    remove_cloudflare_config
+)
 from utils.monitorizacion import (
     get_tunnel_metrics,
     check_tunnel_connectivity
@@ -87,6 +93,9 @@ def index():
     cloudflared_installed = check_cloudflared_installed()
     cloudflared_version = get_cloudflared_version() if cloudflared_installed else None
     
+    # Verificar si Cloudflare API está configurada
+    cloudflare_configured = is_cloudflare_configured()
+    
     # Obtener información de túneles si cloudflared está instalado
     tunnels = []
     if cloudflared_installed:
@@ -100,7 +109,8 @@ def index():
         system_info=system_info,
         cloudflared_installed=cloudflared_installed,
         cloudflared_version=cloudflared_version,
-        tunnels=tunnels
+        tunnels=tunnels,
+        cloudflare_configured=cloudflare_configured
     )
 
 # Ruta para la instalación
@@ -584,7 +594,70 @@ def system_stats():
             'error': str(e)
         }), 500
 
-# Ruta para la página de ayuda
+# Ruta para configurar API Cloudflare
+@app.route('/configurar-cloudflare')
+def configurar_cloudflare():
+    # Verificar si ya está configurado
+    cloudflare_configured = is_cloudflare_configured()
+    
+    return render_template(
+        'configurar_cloudflare.html',
+        cloudflare_configured=cloudflare_configured
+    )
+
+# Ruta para guardar la configuración de Cloudflare
+@app.route('/guardar-configuracion-cloudflare', methods=['POST'])
+def guardar_configuracion_cloudflare():
+    api_key = request.form.get('api_key')
+    email = request.form.get('email')
+    
+    if not api_key or not email:
+        flash('Todos los campos son obligatorios', 'danger')
+        return redirect(url_for('configurar_cloudflare'))
+    
+    try:
+        success, message = save_cloudflare_config(api_key, email)
+        if success:
+            flash('Configuración de Cloudflare guardada correctamente', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash(f'Error al guardar la configuración: {message}', 'danger')
+    except Exception as e:
+        flash(f'Error al guardar la configuración: {str(e)}', 'danger')
+        app.logger.error(f"Error al guardar la configuración de Cloudflare: {str(e)}")
+    
+    return redirect(url_for('configurar_cloudflare'))
+
+# Ruta para eliminar la configuración de Cloudflare
+@app.route('/eliminar-configuracion-cloudflare', methods=['POST'])
+def eliminar_configuracion_cloudflare():
+    try:
+        success, message = remove_cloudflare_config()
+        if success:
+            flash('Configuración de Cloudflare eliminada correctamente', 'success')
+        else:
+            flash(f'Error al eliminar la configuración: {message}', 'danger')
+    except Exception as e:
+        flash(f'Error al eliminar la configuración: {str(e)}', 'danger')
+        app.logger.error(f"Error al eliminar la configuración de Cloudflare: {str(e)}")
+    
+    return redirect(url_for('configurar_cloudflare'))
+
+# Ruta para probar la conexión con Cloudflare
+@app.route('/probar-conexion-cloudflare', methods=['POST'])
+def probar_conexion_cloudflare():
+    try:
+        success, message = test_cloudflare_auth()
+        if success:
+            flash('Conexión con Cloudflare exitosa', 'success')
+        else:
+            flash(f'Error de conexión: {message}', 'danger')
+    except Exception as e:
+        flash(f'Error al probar la conexión: {str(e)}', 'danger')
+        app.logger.error(f"Error al probar la conexión con Cloudflare: {str(e)}")
+    
+    return redirect(url_for('configurar_cloudflare'))
+
 @app.route('/ayuda')
 def ayuda():
     return render_template('ayuda.html')

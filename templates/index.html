@@ -8,6 +8,16 @@
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i> Esta aplicación te permite instalar, configurar y gestionar túneles CloudFlare Zero Trust en tu servidor Ubuntu sin necesidad de Docker.
         </div>
+
+        {% if not cloudflare_configured and cloudflared_installed %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> <strong>API de Cloudflare no configurada</strong>
+            <p class="mt-2">Para aprovechar todas las funcionalidades de la aplicación, debes configurar tus credenciales de Cloudflare.</p>
+            <a href="{{ url_for('configurar_cloudflare') }}" class="btn btn-warning mt-2">
+                <i class="fas fa-gear"></i> Configurar API de Cloudflare
+            </a>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -82,9 +92,16 @@
             </div>
             <div class="card-footer">
                 {% if cloudflared_installed %}
-                    <a href="{{ url_for('configuracion') }}" class="btn btn-primary">
-                        <i class="fas fa-gear"></i> Gestionar túneles
-                    </a>
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('configuracion') }}" class="btn btn-primary">
+                            <i class="fas fa-gear"></i> Gestionar túneles
+                        </a>
+                        {% if not cloudflare_configured %}
+                        <a href="{{ url_for('configurar_cloudflare') }}" class="btn btn-warning">
+                            <i class="fas fa-key"></i> Configurar API
+                        </a>
+                        {% endif %}
+                    </div>
                 {% else %}
                     <a href="{{ url_for('instalacion') }}" class="btn btn-primary">
                         <i class="fas fa-download"></i> Instalar CloudFlared
