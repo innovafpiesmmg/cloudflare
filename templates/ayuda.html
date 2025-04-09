@@ -145,7 +145,12 @@
                                 <p>Guía paso a paso para instalar CloudFlared en tu servidor Ubuntu.</p>
                                 <ol>
                                     <li>Accede a la sección de <a href="{{ url_for('instalacion') }}">Instalación</a>.</li>
-                                    <li>Haz clic en el botón "Instalar CloudFlared".</li>
+                                    <li>Selecciona uno de los métodos de instalación disponibles:
+                                        <ul>
+                                            <li><strong>Instalación Automática:</strong> Utiliza el botón azul para instalar mediante descarga directa.</li>
+                                            <li><strong>Instalación Manual:</strong> Utiliza el botón verde para instalar desde el repositorio oficial de Cloudflare (recomendado).</li>
+                                        </ul>
+                                    </li>
                                     <li>Espera a que termine el proceso de instalación.</li>
                                     <li>Verifica que la instalación se haya completado correctamente.</li>
                                 </ol>
@@ -249,10 +254,35 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="troubleHeadingThree">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#troubleCollapseThree" aria-expanded="false" aria-controls="troubleCollapseThree">
-                                Error "certificate signed by unknown authority"
+                                Problemas al instalar CloudFlared
                             </button>
                         </h2>
                         <div id="troubleCollapseThree" class="accordion-collapse collapse" aria-labelledby="troubleHeadingThree" data-bs-parent="#troubleshootAccordion">
+                            <div class="accordion-body">
+                                <p>Si tienes problemas al instalar CloudFlared, prueba las siguientes soluciones:</p>
+                                <ol>
+                                    <li><strong>Usar la instalación manual:</strong> Si la instalación automática falla, utiliza el botón verde de "Instalación Manual" que usa el repositorio oficial de Cloudflare.</li>
+                                    <li><strong>Verificar conexión a Internet:</strong> Asegúrate de que el servidor tiene acceso a Internet para descargar los paquetes necesarios.</li>
+                                    <li><strong>Permisos de root:</strong> Asegúrate de ejecutar los comandos con privilegios de administrador (sudo).</li>
+                                    <li><strong>Instalar manualmente:</strong> Puedes ejecutar los comandos directamente en la terminal:
+                                        <pre class="bg-dark text-light p-2 my-2 rounded"><code>sudo mkdir -p --mode=0755 /usr/share/keyrings
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list
+sudo apt-get update && sudo apt-get install -y cloudflared</code></pre>
+                                    </li>
+                                    <li><strong>Reiniciar el servidor:</strong> En algunos casos, reiniciar el servidor puede solucionar problemas de dependencias.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="troubleHeadingFour">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#troubleCollapseFour" aria-expanded="false" aria-controls="troubleCollapseFour">
+                                Error "certificate signed by unknown authority"
+                            </button>
+                        </h2>
+                        <div id="troubleCollapseFour" class="accordion-collapse collapse" aria-labelledby="troubleHeadingFour" data-bs-parent="#troubleshootAccordion">
                             <div class="accordion-body">
                                 <p>Este error suele ocurrir cuando CloudFlared no puede verificar el certificado del servicio local. Para solucionarlo:</p>
                                 <ol>

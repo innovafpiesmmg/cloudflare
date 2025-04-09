@@ -136,6 +136,14 @@ def instalar_cloudflared():
         session['instalacion_estado'] = 'iniciada'
         session['instalacion_tiempo'] = time.time()
         
+        # Verificar el método de instalación seleccionado
+        metodo = request.form.get('metodo', 'auto')
+        
+        if metodo == 'manual':
+            # Redirigir a la instalación manual
+            return redirect(url_for('instalar_cloudflared_manual'))
+        
+        # Método automático (por defecto)
         # Instalar dependencias primero
         app.logger.info("Iniciando instalación de dependencias...")
         install_result_deps = install_dependencies()
@@ -189,6 +197,89 @@ def instalar_cloudflared():
         flash(f'Error durante la instalación: {str(e)}', 'danger')
         app.logger.error(f"Error durante la instalación: {str(e)}")
         session['instalacion_estado'] = 'error'
+        return redirect(url_for('instalacion'))
+
+
+@app.route('/instalar-cloudflared-manual', methods=['GET', 'POST'])
+def instalar_cloudflared_manual():
+    try:
+        # Verificar si el script existe
+        script_path = './install_cloudflared.sh'
+        if not os.path.exists(script_path):
+            flash('No se encontró el script de instalación manual.', 'danger')
+            return redirect(url_for('instalacion'))
+        
+        # Marcar como chmod +x
+        try:
+            os.chmod(script_path, 0o755)
+        except Exception as e:
+            app.logger.warning(f"No se pudieron establecer permisos de ejecución: {str(e)}")
+            
+        # Crear sesión para seguimiento de estado de instalación
+        session['instalacion_estado'] = 'iniciada_manual'
+        session['instalacion_tiempo'] = time.time()
+        
+        # Ejecutar el script como root
+        app.logger.info("Iniciando instalación manual de CloudFlared...")
+        session['instalacion_estado'] = 'cloudflared_manual'
+        
+        # La instalación puede tardar, crear un thread para no bloquear la respuesta
+        import threading
+        import subprocess
+        from queue import Queue
+        
+        result_queue = Queue()
+        def install_manual_thread():
+            try:
+                # Ejecutar el script
+                cmd = ['sudo', './install_cloudflared.sh']
+                result = subprocess.run(
+                    cmd, 
+                    capture_output=True, 
+                    text=True,
+                    timeout=300  # 5 minutos timeout
+                )
+                
+                if result.returncode == 0:
+                    app.logger.info(f"Instalación manual exitosa: {result.stdout}")
+                    result_queue.put(True)
+                else:
+                    app.logger.error(f"Error en instalación manual: {result.stderr}")
+                    result_queue.put(False)
+            except Exception as e:
+                app.logger.error(f"Error en thread de instalación manual: {str(e)}")
+                result_queue.put(False)
+        
+        # Iniciar thread de instalación
+        install_thread = threading.Thread(target=install_manual_thread)
+        install_thread.daemon = True
+        install_thread.start()
+        
+        # Esperar resultado con timeout (10 segundos para la respuesta web)
+        try:
+            # Esperar brevemente para dar tiempo a que comience la instalación
+            # pero no demasiado para evitar que se bloquee la interfaz
+            install_thread.join(timeout=2.0)
+            
+            # Establecer mensaje para la interfaz
+            flash('La instalación manual de CloudFlared está en progreso. Por favor, espere unos minutos y refresque la página.', 'info')
+            flash('Este método utiliza el repositorio oficial de Cloudflare para la instalación.', 'info')
+            
+            # Guardar en sesión para mostrar progreso
+            session['instalacion_estado'] = 'en_progreso_manual'
+            session.modified = True
+            
+            return redirect(url_for('instalacion'))
+            
+        except Exception as e:
+            app.logger.error(f"Error al esperar thread de instalación manual: {str(e)}")
+            flash(f'Error al iniciar instalación manual de CloudFlared: {str(e)}', 'danger')
+            session['instalacion_estado'] = 'error'
+            return redirect(url_for('instalacion'))
+            
+    except Exception as e:
+        app.logger.error(f"Error en ruta de instalación manual: {str(e)}")
+        flash(f'Error al instalar CloudFlared manualmente: {str(e)}', 'danger')
         return redirect(url_for('instalacion'))
 
 # Ruta para verificar estado de instalación
