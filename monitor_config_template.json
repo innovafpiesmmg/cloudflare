@@ -1,0 +1,18 @@
+{
+    "email_notifications": false,
+    "smtp_server": "smtp.example.com",
+    "smtp_port": 587,
+    "smtp_user": "usuario@example.com",
+    "smtp_password": "contraseña_segura",
+    "notification_email": "admin@example.com",
+    "from_email": "cloudflare-monitor@example.com",
+    "check_interval_seconds": 300,
+    "alert_recovery_minutes": 30,
+    "enable_system_stats": true,
+    "allowed_ip_networks": [
+        "127.0.0.1/8",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16"
+    ]
+}

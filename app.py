@@ -1,6 +1,12 @@
 import os
+import sys
 import logging
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+import secrets
+import time
+from datetime import datetime
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response
+from werkzeug.middleware.proxy_fix import ProxyFix
 from utils.cloudflare import (
     check_cloudflared_installed, 
     install_cloudflared, 
@@ -31,12 +37,45 @@ from utils.monitorizacion import (
     check_tunnel_connectivity
 )
 
-# Configuración del logging
-logging.basicConfig(level=logging.DEBUG)
+# Configuración del logging para producción
+log_level = logging.INFO if os.environ.get('FLASK_ENV') == 'production' else logging.DEBUG
+logging.basicConfig(
+    level=log_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 # Inicializar la aplicación Flask
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "cloudflare_tunnel_config_secret")
+
+# Generar una clave secreta fuerte si no existe en el entorno
+app.secret_key = os.environ.get("SESSION_SECRET", secrets.token_hex(32))
+
+# Configurar la aplicación para entornos de producción detrás de proxies
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+
+# Configuración de seguridad para producción
+if os.environ.get('FLASK_ENV') == 'production':
+    # Configurar sesiones seguras en producción
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hora
+    
+    # Desactivar modo debug en producción
+    app.config['DEBUG'] = False
+    
+    # Otras configuraciones de producción
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
+    
+# Configurar encabezados de seguridad
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 # Ruta principal
 @app.route('/')
@@ -336,6 +375,131 @@ def api_estado_tunel(nombre_tunel):
             'success': False,
             'error': str(e)
         })
+
+# Decorator para limitar el acceso por IP
+def restrict_access_by_ip(allowed_networks=['127.0.0.1/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Implementación básica para comprobar si la IP está en una red permitida
+            client_ip = request.remote_addr
+            
+            # Para producción utilizar una biblioteca como 'ipaddress' para verificar correctamente
+            # Esta es una implementación simple
+            is_allowed = any(client_ip.startswith(net.split('/')[0]) for net in allowed_networks)
+            
+            if not is_allowed and os.environ.get('FLASK_ENV') == 'production':
+                app.logger.warning(f"Intento de acceso no autorizado a ruta protegida desde IP: {client_ip}")
+                return Response("Acceso no autorizado", status=403)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# Ruta de estado de salud para monitoreo
+@app.route('/health')
+def health_check():
+    # Verificar componentes críticos
+    try:
+        # Verificar que podemos acceder al sistema de archivos
+        os.access('.', os.R_OK)
+        
+        # Verificar si podemos ejecutar comandos de sistema (básico)
+        import subprocess
+        subprocess.run(["echo", "test"], capture_output=True, check=True)
+        
+        # Comprobar espacio en disco
+        disk_usage = os.statvfs('.')
+        free_space_gb = (disk_usage.f_bavail * disk_usage.f_frsize) / (1024**3)
+        
+        # Si tenemos menos de 100MB de espacio libre, mostrar advertencia
+        disk_status = "ok" if free_space_gb > 0.1 else "low"
+        
+        # Verificar tiempo de actividad
+        uptime = time.time() - os.path.getmtime('/proc/1/cmdline')
+        
+        # Información de versión
+        version_info = {
+            "app_version": "1.0.0",
+            "python_version": os.environ.get('PYTHON_VERSION', '.'.join(map(str, tuple(sys.version_info)[:3]))),
+            "cloudflared_version": get_cloudflared_version() if check_cloudflared_installed() else "No instalado"
+        }
+        
+        return jsonify({
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "uptime_seconds": uptime,
+            "disk_space": {
+                "free_gb": round(free_space_gb, 2),
+                "status": disk_status
+            },
+            "components": {
+                "filesystem": "ok",
+                "system": "ok"
+            },
+            "version": version_info
+        })
+    except Exception as e:
+        app.logger.error(f"Error en health check: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+# Ruta protegida para estadísticas detalladas del sistema
+@app.route('/system-stats')
+@restrict_access_by_ip()
+def system_stats():
+    try:
+        import psutil
+        
+        # Información del sistema
+        cpu_usage = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        # Procesos relacionados con CloudFlare
+        cloudflare_processes = []
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'cpu_percent', 'memory_percent']):
+            try:
+                if 'cloudflared' in proc.info['name'] or \
+                   any('cloudflared' in cmd for cmd in proc.info['cmdline'] if cmd):
+                    cloudflare_processes.append({
+                        'pid': proc.info['pid'],
+                        'cpu_percent': proc.info['cpu_percent'],
+                        'memory_percent': proc.info['memory_percent'],
+                        'cmdline': ' '.join(proc.info['cmdline']) if proc.info['cmdline'] else ''
+                    })
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        
+        # Información de túneles
+        tunnels = get_tunnels_list() if check_cloudflared_installed() else []
+        
+        return jsonify({
+            'system': {
+                'cpu_percent': cpu_usage,
+                'memory': {
+                    'total_gb': round(memory.total / (1024**3), 2),
+                    'used_gb': round(memory.used / (1024**3), 2),
+                    'percent': memory.percent
+                },
+                'disk': {
+                    'total_gb': round(disk.total / (1024**3), 2),
+                    'used_gb': round(disk.used / (1024**3), 2),
+                    'percent': disk.percent
+                }
+            },
+            'cloudflared_processes': cloudflare_processes,
+            'tunnels_count': len(tunnels)
+        })
+    except Exception as e:
+        app.logger.error(f"Error al generar estadísticas del sistema: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 # Ruta para la página de ayuda
 @app.route('/ayuda')

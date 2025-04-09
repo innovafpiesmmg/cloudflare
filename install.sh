@@ -109,13 +109,48 @@ print_status "Habilitando e iniciando el servicio..."
 systemctl enable gestor-tuneles-cloudflare
 systemctl start gestor-tuneles-cloudflare
 
-# Verificar si el servicio se inició correctamente
+# Configuración del servicio de monitoreo
+print_status "Configurando servicio de monitoreo..."
+cp $INSTALL_DIR/cloudflare-monitor.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable cloudflare-monitor.service
+systemctl start cloudflare-monitor.service
+
+# Verificar si los servicios se iniciaron correctamente
 if systemctl is-active --quiet gestor-tuneles-cloudflare; then
-    print_status "Servicio iniciado correctamente."
+    print_status "Servicio principal iniciado correctamente."
 else
-    print_error "Error al iniciar el servicio. Verificando logs..."
+    print_error "Error al iniciar el servicio principal. Verificando logs..."
     journalctl -u gestor-tuneles-cloudflare -n 20
 fi
+
+if systemctl is-active --quiet cloudflare-monitor; then
+    print_status "Servicio de monitoreo iniciado correctamente."
+else
+    print_warning "El servicio de monitoreo no pudo iniciarse. Verificando logs..."
+    journalctl -u cloudflare-monitor -n 10
+    print_warning "Esto no afecta al funcionamiento principal de la aplicación."
+fi
+
+# Configuración para producción
+print_status "Aplicando configuraciones de seguridad adicionales..."
+mkdir -p $INSTALL_DIR/config
+chmod 700 $INSTALL_DIR/config
+
+# Copiar plantilla de configuración del monitor
+if [ -f "$INSTALL_DIR/monitor_config_template.json" ]; then
+    cp "$INSTALL_DIR/monitor_config_template.json" "$INSTALL_DIR/config/monitor_config.json"
+    chmod 600 "$INSTALL_DIR/config/monitor_config.json"
+    print_status "Plantilla de configuración del monitor instalada"
+fi
+
+# Variable para entorno de producción
+grep -q "FLASK_ENV=production" /etc/environment || echo "FLASK_ENV=production" >> /etc/environment
+
+# Crear directorio de logs
+mkdir -p /var/log/cloudflare
+touch /var/log/cloudflare-monitor.log
+chmod 640 /var/log/cloudflare-monitor.log
 
 # Mostrar información final
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
@@ -125,8 +160,17 @@ print_status "====================================================="
 print_status "Puedes acceder a la interfaz web en:"
 print_status "http://$IP_ADDRESS:5000"
 print_status ""
-print_status "Si encuentras algún problema, verifica los logs con:"
-print_status "journalctl -u gestor-tuneles-cloudflare -f"
+print_status "Para mayor seguridad en producción, configura HTTPS con Nginx"
+print_status "siguiendo las instrucciones en README.md"
+print_status ""
+print_status "Monitoreo:"
+print_status "- Estado del servicio principal: systemctl status gestor-tuneles-cloudflare"
+print_status "- Estado del servicio de monitoreo: systemctl status cloudflare-monitor"
+print_status "- Logs: journalctl -u gestor-tuneles-cloudflare -f"
+print_status "- API de salud: http://$IP_ADDRESS:5000/health"
+print_status ""
+print_status "Para configurar notificaciones por correo, edita el archivo:"
+print_status "$INSTALL_DIR/config/monitor_config.json"
 print_status "====================================================="
 
 exit 0

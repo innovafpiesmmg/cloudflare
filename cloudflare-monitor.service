@@ -1,0 +1,17 @@
+[Unit]
+Description=Servicio de monitorización de túneles CloudFlare
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/gestor-tuneles-cloudflare
+ExecStart=/opt/gestor-tuneles-cloudflare/venv/bin/python3 /opt/gestor-tuneles-cloudflare/monitor.py --daemon
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cloudflare-monitor
+
+[Install]
+WantedBy=multi-user.target
