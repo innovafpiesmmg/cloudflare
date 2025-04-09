@@ -1,0 +1,204 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="fas fa-chart-line"></i> Estado de Túneles</h1>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> En esta sección podrás monitorizar el estado de tus túneles CloudFlare y ver estadísticas de uso.
+        </div>
+    </div>
+</div>
+
+<!-- Panel de estado general -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tachometer-alt"></i> Panel de Estado
+                <span class="float-end">
+                    <a href="javascript:void(0)" onclick="refreshTunnelStatus()" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </a>
+                </span>
+            </div>
+            <div class="card-body">
+                {% if tunnels %}
+                    <div class="row">
+                        {% for tunnel in tunnels %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card tunnel-status-card" data-tunnel-name="{{ tunnel.name }}">
+                                    <div class="card-header">
+                                        <strong>{{ tunnel.name }}</strong>
+                                        {% if tunnel_statuses[tunnel.name].running %}
+                                            <span class="badge bg-success float-end status-badge">Activo</span>
+                                        {% else %}
+                                            <span class="badge bg-danger float-end status-badge">Inactivo</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-body">
+                                        <p><strong>ID:</strong> <small class="text-muted">{{ tunnel.id }}</small></p>
+                                        
+                                        <p>
+                                            <strong>Conectividad:</strong>
+                                            {% if tunnel_statuses[tunnel.name].running and tunnel_statuses[tunnel.name].connectivity %}
+                                                <span class="badge bg-success connectivity-badge">Conectado</span>
+                                            {% elif tunnel_statuses[tunnel.name].running and not tunnel_statuses[tunnel.name].connectivity %}
+                                                <span class="badge bg-warning connectivity-badge">Problemas de conectividad</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary connectivity-badge">--</span>
+                                            {% endif %}
+                                        </p>
+                                        
+                                        {% if tunnel_statuses[tunnel.name].running %}
+                                            <p><strong>Tiempo activo:</strong> {{ tunnel_statuses[tunnel.name].uptime }}</p>
+                                            <p><strong>PID:</strong> {{ tunnel_statuses[tunnel.name].pid }}</p>
+                                        {% endif %}
+                                        
+                                        <p class="text-muted small last-updated">
+                                            Última actualización: {{ tunnel_statuses[tunnel.name].last_updated }}
+                                        </p>
+                                    </div>
+                                    <div class="card-footer">
+                                        <div class="btn-group" role="group">
+                                            {% if tunnel_statuses[tunnel.name].running %}
+                                                <form method="post" action="{{ url_for('detener_tunel', nombre_tunel=tunnel.name) }}" id="stop-tunnel-form-{{ loop.index }}">
+                                                    <button type="button" class="btn btn-warning btn-sm" onclick="confirmarEliminacion('stop-tunnel-form-{{ loop.index }}', '¿Estás seguro de que deseas detener el túnel {{ tunnel.name }}?')">
+                                                        <i class="fas fa-stop"></i> Detener
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <form method="post" action="{{ url_for('iniciar_tunel', nombre_tunel=tunnel.name) }}">
+                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                        <i class="fas fa-play"></i> Iniciar
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                            
+                                            <a href="{{ url_for('servicios') }}" class="btn btn-info btn-sm ms-1">
+                                                <i class="fas fa-server"></i> Servicios
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No hay túneles configurados todavía. <a href="{{ url_for('configuracion') }}">Crea un túnel</a> para comenzar a monitorizarlo.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Métricas de túneles activos -->
+{% if tunnels %}
+    {% for tunnel in tunnels %}
+        {% if tunnel_statuses[tunnel.name].running and tunnel_metrics[tunnel.name] %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-chart-bar"></i> Métricas del túnel: <strong>{{ tunnel.name }}</strong>
+                        </div>
+                        <div class="card-body tunnel-metrics" data-tunnel-name="{{ tunnel.name }}">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5 class="card-title">Conexiones</h5>
+                                    <div class="metrics-container">
+                                        <canvas class="chart-connections"></canvas>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="card-title">Ancho de banda</h5>
+                                    <div class="metrics-container">
+                                        <canvas class="chart-bandwidth"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-4">
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h3 class="display-5">{{ tunnel_metrics[tunnel.name].connections }}</h3>
+                                            <p class="text-muted">Conexiones activas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h3 class="display-5">{{ tunnel_metrics[tunnel.name].upload_formatted }}</h3>
+                                            <p class="text-muted">Subida</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h3 class="display-5">{{ tunnel_metrics[tunnel.name].download_formatted }}</h3>
+                                            <p class="text-muted">Bajada</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<!-- Sección de acciones -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tools"></i> Acciones
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 mb-3"><i class="fas fa-plus-circle"></i></h1>
+                                <h5 class="card-title">Crear túnel</h5>
+                                <p class="card-text">Crear un nuevo túnel CloudFlare</p>
+                                <a href="{{ url_for('configuracion') }}" class="btn btn-primary mt-2">Ir a configuración</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 mb-3"><i class="fas fa-server"></i></h1>
+                                <h5 class="card-title">Gestionar servicios</h5>
+                                <p class="card-text">Configurar servicios para tus túneles</p>
+                                <a href="{{ url_for('servicios') }}" class="btn btn-primary mt-2">Ir a servicios</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 mb-3"><i class="fas fa-question-circle"></i></h1>
+                                <h5 class="card-title">Ayuda</h5>
+                                <p class="card-text">Consultar guías y solución de problemas</p>
+                                <a href="{{ url_for('ayuda') }}" class="btn btn-primary mt-2">Ir a ayuda</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

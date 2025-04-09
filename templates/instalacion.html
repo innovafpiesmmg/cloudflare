@@ -1,0 +1,142 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="fas fa-download"></i> Instalación de CloudFlare Tunnel</h1>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> En esta sección podrás instalar CloudFlared y configurarlo para su uso con túneles Zero Trust.
+        </div>
+    </div>
+</div>
+
+<!-- Estado actual -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-check-circle"></i> Estado de instalación
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">CloudFlared</h5>
+                {% if cloudflared_installed %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> CloudFlared está instalado correctamente.
+                        <p class="mb-0 mt-2"><strong>Versión:</strong> {{ cloudflared_version }}</p>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> CloudFlared no está instalado.
+                    </div>
+                    <form method="post" action="{{ url_for('instalar_cloudflared') }}">
+                        <button type="submit" class="btn btn-primary" id="install-cloudflared-btn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            <span class="btn-text"><i class="fas fa-download"></i> Instalar CloudFlared</span>
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-puzzle-piece"></i> Dependencias del sistema
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Paquetes requeridos</h5>
+                <ul class="dependency-list">
+                    {% for dep in dependencies %}
+                        <li class="d-flex justify-content-between align-items-center">
+                            {{ dep.name }}
+                            {% if dep.installed %}
+                                <span class="badge bg-success">Instalado</span>
+                            {% else %}
+                                <span class="badge bg-warning">No instalado</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pasos de instalación -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list-ol"></i> Proceso de instalación
+            </div>
+            <div class="card-body">
+                <div class="installation-step step-completed">
+                    <div class="step-number">1</div>
+                    <h5>Verificar dependencias</h5>
+                    <p>El sistema comprueba que todas las dependencias necesarias estén instaladas.</p>
+                </div>
+                
+                <div class="installation-step {% if cloudflared_installed %}step-completed{% else %}step-pending{% endif %}">
+                    <div class="step-number">2</div>
+                    <h5>Instalar CloudFlared</h5>
+                    <p>Se descarga e instala la última versión del cliente CloudFlared desde los repositorios oficiales de CloudFlare.</p>
+                    {% if not cloudflared_installed %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Para continuar, haga clic en el botón "Instalar CloudFlared" en la sección de estado.
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="installation-step {% if cloudflared_installed %}step-completed{% else %}step-pending{% endif %}">
+                    <div class="step-number">3</div>
+                    <h5>Verificar instalación</h5>
+                    <p>Se comprueba que CloudFlared se ha instalado correctamente y se muestra su versión.</p>
+                </div>
+                
+                <div class="installation-step {% if cloudflared_installed %}step-completed{% else %}step-pending{% endif %}">
+                    <div class="step-number">4</div>
+                    <h5>Listos para configurar</h5>
+                    <p>Una vez completada la instalación, podrá continuar con la configuración de túneles.</p>
+                    {% if cloudflared_installed %}
+                        <a href="{{ url_for('configuracion') }}" class="btn btn-primary">
+                            <i class="fas fa-gear"></i> Continuar a configuración
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información adicional -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Información adicional
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">¿Qué es CloudFlare Tunnel?</h5>
+                <p>CloudFlare Tunnel es un servicio que crea un túnel seguro entre el servidor web y la red de CloudFlare, permitiendo exponer servicios internos a Internet sin necesidad de abrir puertos en el firewall.</p>
+                
+                <h5 class="card-title mt-3">Ventajas de CloudFlare Tunnel</h5>
+                <ul>
+                    <li>Protección contra ataques DDoS</li>
+                    <li>No es necesario tener una IP pública</li>
+                    <li>No es necesario abrir puertos en el firewall</li>
+                    <li>Integración con CloudFlare Zero Trust para añadir capa adicional de seguridad</li>
+                    <li>Gestión centralizada de certificados SSL</li>
+                </ul>
+                
+                <h5 class="card-title mt-3">Recursos</h5>
+                <ul>
+                    <li><a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/" target="_blank">Documentación oficial de CloudFlare Tunnel</a></li>
+                    <li><a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide/" target="_blank">Guía de configuración de túneles</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

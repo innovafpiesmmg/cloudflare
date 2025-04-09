@@ -1,0 +1,152 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Bienvenido al Gestor de Túneles CloudFlare Zero Trust</h1>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Esta aplicación te permite instalar, configurar y gestionar túneles CloudFlare Zero Trust en tu servidor Ubuntu sin necesidad de Docker.
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Información del sistema -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-desktop"></i> Información del Sistema
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Sistema Operativo
+                        <span class="badge bg-secondary">{{ system_info.os }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Hostname
+                        <span class="badge bg-secondary">{{ system_info.hostname }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        IP Local
+                        <span class="badge bg-secondary">{{ system_info.ip }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Memoria RAM
+                        <span class="badge bg-secondary">{{ system_info.ram }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Espacio en Disco
+                        <span class="badge bg-secondary">{{ system_info.disk }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estado de CloudFlared -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cloud"></i> Estado de CloudFlare Tunnel
+            </div>
+            <div class="card-body">
+                {% if cloudflared_installed %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> CloudFlared está instalado (versión {{ cloudflared_version }})
+                    </div>
+                    
+                    {% if tunnels %}
+                        <h5 class="card-title mt-3">Túneles configurados</h5>
+                        <ul class="list-group">
+                            {% for tunnel in tunnels %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ tunnel.name }}
+                                    <a href="{{ url_for('estado') }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-chart-line"></i> Ver estado
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i> No hay túneles configurados todavía
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> CloudFlared no está instalado
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                {% if cloudflared_installed %}
+                    <a href="{{ url_for('configuracion') }}" class="btn btn-primary">
+                        <i class="fas fa-gear"></i> Gestionar túneles
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('instalacion') }}" class="btn btn-primary">
+                        <i class="fas fa-download"></i> Instalar CloudFlared
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Guía rápida -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list-check"></i> Guía Rápida
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 mb-3"><i class="fas fa-download"></i></h1>
+                                <h5 class="card-title">1. Instalación</h5>
+                                <p class="card-text">Instala CloudFlared en tu servidor</p>
+                                <a href="{{ url_for('instalacion') }}" class="btn btn-outline-primary mt-2">Ir a instalación</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 mb-3"><i class="fas fa-gear"></i></h1>
+                                <h5 class="card-title">2. Configuración</h5>
+                                <p class="card-text">Configura túneles Zero Trust</p>
+                                <a href="{{ url_for('configuracion') }}" class="btn btn-outline-primary mt-2">Ir a configuración</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 mb-3"><i class="fas fa-server"></i></h1>
+                                <h5 class="card-title">3. Servicios</h5>
+                                <p class="card-text">Configura servicios para el túnel</p>
+                                <a href="{{ url_for('servicios') }}" class="btn btn-outline-primary mt-2">Ir a servicios</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h1 class="display-4 mb-3"><i class="fas fa-chart-line"></i></h1>
+                                <h5 class="card-title">4. Monitorización</h5>
+                                <p class="card-text">Monitoriza el estado de tus túneles</p>
+                                <a href="{{ url_for('estado') }}" class="btn btn-outline-primary mt-2">Ir a estado</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

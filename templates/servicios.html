@@ -1,0 +1,244 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="fas fa-server"></i> Gestión de Servicios</h1>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> En esta sección podrás configurar qué servicios se expondrán a través de tus túneles CloudFlare.
+        </div>
+    </div>
+</div>
+
+<!-- Añadir nuevo servicio -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle"></i> Añadir servicio a túnel
+            </div>
+            <div class="card-body">
+                {% if tunnels %}
+                    <form id="add-service-form" method="post" action="{{ url_for('anadir_servicio') }}">
+                        <div class="mb-3">
+                            <label for="tunnel_name" class="form-label">Seleccionar túnel</label>
+                            <select class="form-select" id="tunnel_name" name="tunnel_name" required>
+                                <option value="">Seleccione un túnel...</option>
+                                {% for tunnel in tunnels %}
+                                    <option value="{{ tunnel.name }}">{{ tunnel.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="service_name" class="form-label">Nombre del servicio</label>
+                            <input type="text" class="form-control" id="service_name" name="service_name" placeholder="web, ssh, nextcloud, etc." required>
+                            <div class="form-text">Un nombre para identificar este servicio.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="service_port" class="form-label">Puerto del servicio</label>
+                            <input type="number" class="form-control" id="service_port" name="service_port" placeholder="80, 443, 22, etc." min="1" max="65535" required>
+                            <div class="form-text">El puerto local donde se ejecuta el servicio.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="domain" class="form-label">Dominio/subdominio</label>
+                            <input type="text" class="form-control" id="domain" name="domain" placeholder="ejemplo.midominio.com" required>
+                            <div class="form-text">El dominio o subdominio que apuntará a este servicio.</div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus-circle"></i> Añadir servicio
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No hay túneles disponibles. Primero debes <a href="{{ url_for('configuracion') }}">crear un túnel</a> antes de añadir servicios.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Servicios disponibles
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Servicios detectados en el sistema</h5>
+                <p>Estos son los servicios que se han detectado en tu sistema y que puedes exponer a través de los túneles CloudFlare.</p>
+                
+                {% if available_services %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Servicio</th>
+                                    <th>Puerto</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in available_services %}
+                                    <tr>
+                                        <td>{{ service.name }}</td>
+                                        <td>{{ service.port }}</td>
+                                        <td>
+                                            {% if service.running %}
+                                                <span class="badge bg-success">Activo</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactivo</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No se han detectado servicios en el sistema.
+                    </div>
+                {% endif %}
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i> También puedes configurar manualmente cualquier servicio, incluso si no aparece en esta lista.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Servicios configurados -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> Servicios configurados
+            </div>
+            <div class="card-body">
+                {% if tunnels %}
+                    <ul class="nav nav-tabs" id="serviceTabs" role="tablist">
+                        {% for tunnel in tunnels %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ tunnel.name }}" data-bs-toggle="tab" data-bs-target="#content-{{ tunnel.name }}" type="button" role="tab" aria-controls="content-{{ tunnel.name }}" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+                                    {{ tunnel.name }}
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="tab-content pt-3" id="serviceTabsContent">
+                        {% for tunnel in tunnels %}
+                            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="content-{{ tunnel.name }}" role="tabpanel" aria-labelledby="tab-{{ tunnel.name }}">
+                                {% if tunnel.services %}
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Servicio</th>
+                                                    <th>Puerto</th>
+                                                    <th>Dominio</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for service in tunnel.services %}
+                                                    <tr>
+                                                        <td>{{ service.name }}</td>
+                                                        <td>{{ service.port }}</td>
+                                                        <td>
+                                                            <a href="https://{{ service.domain }}" target="_blank" class="text-decoration-none">
+                                                                {{ service.domain }} <i class="fas fa-external-link-alt fa-xs"></i>
+                                                            </a>
+                                                        </td>
+                                                        <td>
+                                                            <form method="post" action="{{ url_for('eliminar_servicio') }}" id="delete-service-form-{{ tunnel.name }}-{{ service.name }}">
+                                                                <input type="hidden" name="tunnel_name" value="{{ tunnel.name }}">
+                                                                <input type="hidden" name="service_name" value="{{ service.name }}">
+                                                                <button type="button" class="btn btn-danger btn-sm" onclick="confirmarEliminacion('delete-service-form-{{ tunnel.name }}-{{ service.name }}', '¿Estás seguro de que deseas eliminar el servicio {{ service.name }} del túnel {{ tunnel.name }}?')">
+                                                                    <i class="fas fa-trash"></i> Eliminar
+                                                                </button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle"></i> No hay servicios configurados para este túnel. Añade un servicio usando el formulario de la izquierda.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No hay túneles configurados todavía. Primero debes <a href="{{ url_for('configuracion') }}">crear un túnel</a> antes de añadir servicios.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ejemplos de configuración -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-lightbulb"></i> Ejemplos de configuración
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <i class="fas fa-globe"></i> Servidor Web
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Nombre del servicio:</strong> web</p>
+                                <p><strong>Puerto:</strong> 80 o 443</p>
+                                <p><strong>Dominio:</strong> midominio.com</p>
+                                <p class="text-muted">Expone un servidor web como Apache o Nginx a través del túnel.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-success text-white">
+                                <i class="fas fa-terminal"></i> SSH
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Nombre del servicio:</strong> ssh</p>
+                                <p><strong>Puerto:</strong> 22</p>
+                                <p><strong>Dominio:</strong> ssh.midominio.com</p>
+                                <p class="text-muted">Acceso seguro a SSH desde cualquier lugar sin abrir puertos.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white">
+                                <i class="fas fa-database"></i> Base de datos
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Nombre del servicio:</strong> mysql</p>
+                                <p><strong>Puerto:</strong> 3306</p>
+                                <p><strong>Dominio:</strong> db.midominio.com</p>
+                                <p class="text-muted">Acceso seguro a tu base de datos a través de Zero Trust.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

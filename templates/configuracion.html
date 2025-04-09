@@ -1,0 +1,194 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="fas fa-gear"></i> Configuración de Túneles</h1>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> En esta sección podrás crear, configurar y gestionar tus túneles CloudFlare.
+        </div>
+    </div>
+</div>
+
+<!-- Crear nuevo túnel -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle"></i> Crear nuevo túnel
+            </div>
+            <div class="card-body">
+                <p>Crea un nuevo túnel CloudFlare para conectar tus servicios a Internet de forma segura.</p>
+                
+                <form id="create-tunnel-form" method="post" action="{{ url_for('crear_tunel') }}">
+                    <div class="mb-3">
+                        <label for="nombre_tunel" class="form-label">Nombre del túnel</label>
+                        <input type="text" class="form-control" id="nombre_tunel" name="nombre_tunel" placeholder="mi-tunel-cloudflare" required>
+                        <div class="form-text">Elige un nombre descriptivo para identificar este túnel.</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> Crear túnel
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Información
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">¿Qué es un túnel CloudFlare?</h5>
+                <p>Un túnel CloudFlare te permite exponer servicios de forma segura a Internet sin necesidad de abrir puertos en tu firewall ni tener una IP pública.</p>
+                
+                <h5 class="card-title mt-3">Proceso de configuración</h5>
+                <ol>
+                    <li>Crea un túnel con un nombre descriptivo</li>
+                    <li>Configura los servicios que quieres exponer a través del túnel en la sección <a href="{{ url_for('servicios') }}">Servicios</a></li>
+                    <li>Inicia el túnel y configúralo como servicio para que se inicie automáticamente</li>
+                    <li>Monitoriza el estado de tu túnel en la sección <a href="{{ url_for('estado') }}">Estado</a></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de túneles existentes -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> Túneles existentes
+            </div>
+            <div class="card-body">
+                {% if tunnels %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>ID</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tunnel in tunnels %}
+                                    <tr>
+                                        <td>{{ tunnel.name }}</td>
+                                        <td><small class="text-muted">{{ tunnel.id }}</small></td>
+                                        <td>
+                                            {% if tunnel.running %}
+                                                <span class="badge bg-success">Activo</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactivo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                {% if tunnel.running %}
+                                                    <form method="post" action="{{ url_for('detener_tunel', nombre_tunel=tunnel.name) }}" id="stop-tunnel-form-{{ loop.index }}">
+                                                        <button type="button" class="btn btn-warning btn-sm" onclick="confirmarEliminacion('stop-tunnel-form-{{ loop.index }}', '¿Estás seguro de que deseas detener el túnel {{ tunnel.name }}?')">
+                                                            <i class="fas fa-stop"></i> Detener
+                                                        </button>
+                                                    </form>
+                                                {% else %}
+                                                    <form method="post" action="{{ url_for('iniciar_tunel', nombre_tunel=tunnel.name) }}">
+                                                        <button type="submit" class="btn btn-success btn-sm">
+                                                            <i class="fas fa-play"></i> Iniciar
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                
+                                                <form method="post" action="{{ url_for('configurar_servicio_tunel', nombre_tunel=tunnel.name) }}" class="ms-1">
+                                                    <button type="submit" class="btn btn-primary btn-sm" title="Configurar como servicio del sistema">
+                                                        <i class="fas fa-cog"></i> Servicio
+                                                    </button>
+                                                </form>
+                                                
+                                                <a href="{{ url_for('servicios') }}" class="btn btn-info btn-sm ms-1" title="Configurar servicios del túnel">
+                                                    <i class="fas fa-server"></i> Servicios
+                                                </a>
+                                                
+                                                <form method="post" action="{{ url_for('eliminar_tunel', nombre_tunel=tunnel.name) }}" id="delete-tunnel-form-{{ loop.index }}" class="ms-1">
+                                                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmarEliminacion('delete-tunnel-form-{{ loop.index }}', '¿Estás seguro de que deseas eliminar el túnel {{ tunnel.name }}?')">
+                                                        <i class="fas fa-trash"></i> Eliminar
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No hay túneles configurados todavía. Crea un nuevo túnel para comenzar.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información detallada -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-question-circle"></i> Preguntas frecuentes
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                ¿Cómo funciona un túnel CloudFlare?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p>Un túnel CloudFlare establece una conexión segura entre tu servidor y la red de CloudFlare. Cuando alguien accede a tu dominio, CloudFlare enruta el tráfico a través de este túnel seguro hacia tu servidor, sin necesidad de exponer directamente tu servidor a Internet.</p>
+                                <p>Esto proporciona varias ventajas de seguridad y permite exponer servicios internos sin necesidad de configurar reglas de firewall o tener una IP pública.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                ¿Necesito una cuenta de CloudFlare?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p>Sí, necesitas una cuenta gratuita de CloudFlare para poder utilizar CloudFlare Tunnels. Durante el proceso de creación del túnel, se te pedirá que inicies sesión en tu cuenta de CloudFlare.</p>
+                                <p>El proceso de autenticación se realiza a través del comando <code>cloudflared login</code>, que te pedirá que visites una URL específica para autorizar el acceso.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                ¿Cómo configuro un túnel como servicio del sistema?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p>Para que un túnel se inicie automáticamente cuando arranca el servidor, debes configurarlo como un servicio del sistema. Puedes hacerlo fácilmente haciendo clic en el botón "Servicio" junto al túnel que deseas configurar.</p>
+                                <p>Esto creará un servicio systemd que se encargará de iniciar, detener y reiniciar el túnel automáticamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

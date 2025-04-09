@@ -1,0 +1,337 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="fas fa-circle-question"></i> Ayuda y Documentación</h1>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> En esta sección encontrarás información de ayuda y documentación sobre CloudFlare Tunnels.
+        </div>
+    </div>
+</div>
+
+<!-- Preguntas frecuentes -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-question-circle"></i> Preguntas Frecuentes
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="helpAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                ¿Qué es CloudFlare Tunnel y por qué debería usarlo?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>CloudFlare Tunnel es un servicio que permite exponer servicios alojados en servidores privados a Internet de forma segura, sin necesidad de abrir puertos en el firewall o tener una IP pública.</p>
+                                
+                                <p>Algunas de las ventajas de usar CloudFlare Tunnel son:</p>
+                                <ul>
+                                    <li>Mayor seguridad al no exponer directamente tu servidor a Internet</li>
+                                    <li>No es necesario configurar NAT, abrir puertos, o tener una IP pública</li>
+                                    <li>Protección contra ataques DDoS gracias a la red de CloudFlare</li>
+                                    <li>Integración con CloudFlare Zero Trust para controlar el acceso a tus servicios</li>
+                                    <li>Gestión simplificada de certificados SSL</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                ¿Necesito una cuenta de CloudFlare?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>Sí, para usar CloudFlare Tunnels necesitas una cuenta de CloudFlare, que es gratuita. Además, el dominio que quieras usar debe estar gestionado por CloudFlare.</p>
+                                
+                                <p>Para registrarte en CloudFlare, visita <a href="https://dash.cloudflare.com/sign-up" target="_blank">https://dash.cloudflare.com/sign-up</a> y sigue los pasos para configurar tu dominio con CloudFlare.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                ¿Cómo funciona un túnel CloudFlare?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>Un túnel CloudFlare establece una conexión segura entre tu servidor y la red de CloudFlare. Cuando alguien accede a tu dominio, CloudFlare enruta el tráfico a través de este túnel seguro hacia tu servidor.</p>
+                                
+                                <p>El funcionamiento básico es el siguiente:</p>
+                                <ol>
+                                    <li>El cliente cloudflared se instala en tu servidor y establece una conexión saliente hacia la red de CloudFlare.</li>
+                                    <li>Esta conexión se mantiene abierta y se usa para enrutar el tráfico hacia los servicios que quieras exponer.</li>
+                                    <li>Cuando alguien accede a tu dominio, la solicitud llega a CloudFlare, que la envía a través del túnel hacia tu servidor.</li>
+                                    <li>Tu servidor procesa la solicitud y envía la respuesta a través del túnel de vuelta a CloudFlare, que la entrega al usuario.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFour">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                ¿Cómo soluciono el error "tunnel not found"?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>El error "tunnel not found" suele ocurrir cuando intentas iniciar un túnel que no existe o cuando el archivo de configuración del túnel ha sido eliminado.</p>
+                                
+                                <p>Para solucionar este problema:</p>
+                                <ol>
+                                    <li>Verifica que el túnel exista en tu cuenta de CloudFlare. Puedes ver la lista de túneles en la sección de <a href="{{ url_for('configuracion') }}">Configuración</a>.</li>
+                                    <li>Si el túnel no existe, crea uno nuevo.</li>
+                                    <li>Si el túnel existe pero sigue dando error, intenta eliminarlo y crearlo de nuevo.</li>
+                                    <li>Asegúrate de que el usuario que ejecuta cloudflared tiene acceso a los archivos de configuración en <code>/etc/cloudflared/</code>.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFive">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                ¿Cómo configuro CloudFlare Zero Trust?
+                            </button>
+                        </h2>
+                        <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>CloudFlare Zero Trust es un servicio adicional que te permite controlar el acceso a tus servicios mediante políticas de seguridad.</p>
+                                
+                                <p>Para configurar Zero Trust:</p>
+                                <ol>
+                                    <li>Inicia sesión en tu cuenta de CloudFlare y ve a la sección "Zero Trust".</li>
+                                    <li>Configura tu organización y políticas de acceso.</li>
+                                    <li>Crea aplicaciones para los servicios que quieras proteger.</li>
+                                    <li>Configura las políticas de acceso para cada aplicación, como autenticación mediante correo electrónico, Google, o Azure AD.</li>
+                                </ol>
+                                
+                                <p>Para más información, consulta la <a href="https://developers.cloudflare.com/cloudflare-one/" target="_blank">documentación oficial de CloudFlare Zero Trust</a>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Guías paso a paso -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-book"></i> Guías Paso a Paso
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <i class="fas fa-download"></i> Instalación
+                            </div>
+                            <div class="card-body">
+                                <p>Guía paso a paso para instalar CloudFlared en tu servidor Ubuntu.</p>
+                                <ol>
+                                    <li>Accede a la sección de <a href="{{ url_for('instalacion') }}">Instalación</a>.</li>
+                                    <li>Haz clic en el botón "Instalar CloudFlared".</li>
+                                    <li>Espera a que termine el proceso de instalación.</li>
+                                    <li>Verifica que la instalación se haya completado correctamente.</li>
+                                </ol>
+                                <a href="{{ url_for('instalacion') }}" class="btn btn-outline-primary btn-sm">Ir a la guía</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-success text-white">
+                                <i class="fas fa-gear"></i> Configuración
+                            </div>
+                            <div class="card-body">
+                                <p>Guía para configurar túneles CloudFlare en tu servidor.</p>
+                                <ol>
+                                    <li>Accede a la sección de <a href="{{ url_for('configuracion') }}">Configuración</a>.</li>
+                                    <li>Introduce un nombre para tu túnel y haz clic en "Crear túnel".</li>
+                                    <li>Una vez creado, configúralo como servicio del sistema.</li>
+                                    <li>Inicia el túnel para que esté activo.</li>
+                                </ol>
+                                <a href="{{ url_for('configuracion') }}" class="btn btn-outline-success btn-sm">Ir a la guía</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white">
+                                <i class="fas fa-server"></i> Servicios
+                            </div>
+                            <div class="card-body">
+                                <p>Guía para configurar servicios en tus túneles CloudFlare.</p>
+                                <ol>
+                                    <li>Accede a la sección de <a href="{{ url_for('servicios') }}">Servicios</a>.</li>
+                                    <li>Selecciona el túnel donde quieres añadir el servicio.</li>
+                                    <li>Introduce los datos del servicio: nombre, puerto y dominio.</li>
+                                    <li>Haz clic en "Añadir servicio" para completar la configuración.</li>
+                                </ol>
+                                <a href="{{ url_for('servicios') }}" class="btn btn-outline-info btn-sm">Ir a la guía</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Solución de problemas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-wrench"></i> Solución de Problemas
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Problemas comunes y soluciones</h5>
+                
+                <div class="accordion" id="troubleshootAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="troubleHeadingOne">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#troubleCollapseOne" aria-expanded="false" aria-controls="troubleCollapseOne">
+                                El túnel no se inicia
+                            </button>
+                        </h2>
+                        <div id="troubleCollapseOne" class="accordion-collapse collapse" aria-labelledby="troubleHeadingOne" data-bs-parent="#troubleshootAccordion">
+                            <div class="accordion-body">
+                                <p>Si el túnel no se inicia, verifica lo siguiente:</p>
+                                <ol>
+                                    <li>Asegúrate de que CloudFlared está instalado correctamente. Puedes verificarlo en la sección de <a href="{{ url_for('instalacion') }}">Instalación</a>.</li>
+                                    <li>Verifica que el túnel existe en tu cuenta de CloudFlare.</li>
+                                    <li>Comprueba los logs del servicio con el comando <code>sudo journalctl -u cloudflared-&lt;nombre-tunel&gt;</code>.</li>
+                                    <li>Verifica que los archivos de configuración existen en <code>/etc/cloudflared/</code>.</li>
+                                    <li>Reinicia el servidor y vuelve a intentar iniciar el túnel.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="troubleHeadingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#troubleCollapseTwo" aria-expanded="false" aria-controls="troubleCollapseTwo">
+                                No puedo acceder a mis servicios a través del túnel
+                            </button>
+                        </h2>
+                        <div id="troubleCollapseTwo" class="accordion-collapse collapse" aria-labelledby="troubleHeadingTwo" data-bs-parent="#troubleshootAccordion">
+                            <div class="accordion-body">
+                                <p>Si no puedes acceder a tus servicios a través del túnel, verifica lo siguiente:</p>
+                                <ol>
+                                    <li>Asegúrate de que el túnel está activo. Puedes verificarlo en la sección de <a href="{{ url_for('estado') }}">Estado</a>.</li>
+                                    <li>Verifica que el servicio está configurado correctamente en el túnel. Debes tener el puerto correcto y el dominio configurado.</li>
+                                    <li>Comprueba que el servicio está funcionando localmente. Puedes verificarlo accediendo a <code>http://localhost:&lt;puerto&gt;</code>.</li>
+                                    <li>Verifica que el dominio está configurado correctamente en CloudFlare, apuntando a tu túnel.</li>
+                                    <li>Comprueba si hay políticas de Zero Trust que puedan estar bloqueando el acceso.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="troubleHeadingThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#troubleCollapseThree" aria-expanded="false" aria-controls="troubleCollapseThree">
+                                Error "certificate signed by unknown authority"
+                            </button>
+                        </h2>
+                        <div id="troubleCollapseThree" class="accordion-collapse collapse" aria-labelledby="troubleHeadingThree" data-bs-parent="#troubleshootAccordion">
+                            <div class="accordion-body">
+                                <p>Este error suele ocurrir cuando CloudFlared no puede verificar el certificado del servicio local. Para solucionarlo:</p>
+                                <ol>
+                                    <li>Si el servicio usa HTTPS, asegúrate de que el certificado está firmado por una autoridad reconocida.</li>
+                                    <li>Si usas un certificado autofirmado, puedes configurar CloudFlared para que no verifique el certificado añadiendo <code>originRequest: { noTLSVerify: true }</code> en el archivo de configuración.</li>
+                                    <li>Considera usar HTTP en lugar de HTTPS para la comunicación local, ya que el tráfico ya está cifrado a través del túnel de CloudFlare.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comandos útiles -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-terminal"></i> Comandos Útiles
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Comandos de CloudFlared</h5>
+                
+                <div class="code-block">
+                    <p># Ver la versión de CloudFlared</p>
+                    <code>cloudflared --version</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Listar túneles existentes</p>
+                    <code>cloudflared tunnel list</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Verificar el estado de un túnel</p>
+                    <code>cloudflared tunnel info &lt;nombre-tunel&gt;</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Ver logs del servicio cloudflared</p>
+                    <code>sudo journalctl -u cloudflared-&lt;nombre-tunel&gt; -f</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Iniciar un túnel manualmente</p>
+                    <code>cloudflared tunnel run &lt;nombre-tunel&gt;</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Reiniciar el servicio de un túnel</p>
+                    <code>sudo systemctl restart cloudflared-&lt;nombre-tunel&gt;</code>
+                </div>
+                
+                <h5 class="card-title mt-4">Ubicación de archivos importantes</h5>
+                
+                <div class="code-block">
+                    <p># Directorio principal de configuración</p>
+                    <code>/etc/cloudflared/</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Archivo de configuración de un túnel</p>
+                    <code>/etc/cloudflared/&lt;tunnel-id&gt;.json</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Archivo de configuración general</p>
+                    <code>/etc/cloudflared/config.yml</code>
+                </div>
+                
+                <div class="code-block">
+                    <p># Archivos de servicio systemd</p>
+                    <code>/etc/systemd/system/cloudflared-&lt;nombre-tunel&gt;.service</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
