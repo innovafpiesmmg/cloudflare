@@ -8,6 +8,9 @@
     --ateca-dark-blue: #0d47a1;  /* Azul oscuro */
     --ateca-gradient-start: #1e88e5;
     --ateca-gradient-end: #00acc1;
+    --text-on-brand: #ffffff;    /* Texto sobre colores de marca */
+    --bs-body-bg: #ffffff;      /* Fondo del cuerpo */
+    --bs-body-color: #212529;   /* Color de texto principal */
 }
 
 /* Header y navegación */
@@ -24,7 +27,17 @@
 
 .app-header {
     background: linear-gradient(135deg, var(--ateca-dark-blue), var(--ateca-secondary));
-    border-bottom: 1px solid var(--bs-dark-border-subtle);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.navbar-dark .navbar-nav .nav-link,
+.navbar-dark .navbar-brand {
+    color: var(--text-on-brand);
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-brand:hover {
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* Tarjetas con fondo un poco más claro */
@@ -44,6 +57,7 @@
 .card-header {
     font-weight: 600;
     background: linear-gradient(90deg, var(--ateca-dark-blue), var(--ateca-primary));
+    color: var(--text-on-brand);
 }
 
 /* Estilos para botones principales */
@@ -77,9 +91,20 @@
 /* Estilo para el pie de página */
 .footer {
     background: linear-gradient(135deg, var(--ateca-dark-blue), var(--ateca-secondary));
-    border-top: 1px solid var(--bs-dark-border-subtle);
+    border-top: 1px solid var(--bs-border-color);
     padding: 1rem 0;
     font-size: 0.875rem;
+    color: var(--text-on-brand);
+}
+
+.footer a {
+    color: var(--text-on-brand);
+    text-decoration: none;
+}
+
+.footer a:hover {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: underline;
 }
 
 /* Estilos para badges de estado */

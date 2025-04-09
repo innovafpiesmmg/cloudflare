@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="es" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración de Túneles CloudFlare Zero Trust</title>
+    <title>Gestor de Túneles CloudFlare</title>
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon-128x128.png') }}">
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <!-- Font Awesome para iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Estilos personalizados -->
@@ -19,7 +23,7 @@
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <img src="{{ url_for('static', filename='img/ateca-techlab-logo.png') }}" alt="ATECA TECHLAB SOFTWARE" class="navbar-brand-logo">
-                CloudFlare Tunnel Manager
+                Gestor de Túneles CloudFlare
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -91,7 +95,7 @@
                     </p>
                 </div>
                 <div class="col-md-4 text-center">
-                    <p class="mb-0">CloudFlare Tunnel Manager</p>
+                    <p class="mb-0">Gestor de Túneles CloudFlare</p>
                 </div>
                 <div class="col-md-4 text-md-end">
                     <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/" class="text-light" target="_blank">
