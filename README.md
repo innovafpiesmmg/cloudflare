@@ -1,56 +1,98 @@
-# Gestor de Túneles CloudFlare
+# 🚇 Gestor de Túneles CloudFlare
 
-![Gestor de Túneles CloudFlare](https://img.shields.io/badge/CloudFlare-Gestor%20de%20Túneles-orange)
-![Version](https://img.shields.io/badge/Versión-1.2-blue)
-![Idioma](https://img.shields.io/badge/Idioma-Español-green)
-![Plataforma](https://img.shields.io/badge/Plataforma-Ubuntu-purple)
+<div align="center">
+  <img src="https://github.com/innovafpiesmmg/cloudflare/raw/main/static/img/logo.png" alt="ATECA TECHLAB SOFTWARE" width="300"/>
+  
+  ![Version](https://img.shields.io/badge/Versión-1.5-blue)
+  ![Plataforma](https://img.shields.io/badge/Plataforma-Ubuntu-purple)
+  ![Idioma](https://img.shields.io/badge/Idioma-Español-green)
+  ![CloudFlare](https://img.shields.io/badge/CloudFlare-Zero_Trust-orange)
+  ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow)
+</div>
 
-Una interfaz gráfica web en español para instalar y configurar túneles CloudFlare Zero Trust en servidores Ubuntu sin Docker, desarrollada por ATECA TECHLAB SOFTWARE. Esta aplicación permite acceder a distintos servicios alojados en el servidor mediante túneles, proporcionando una gestión completa y monitorización avanzada.
+## ¿Qué es el Gestor de Túneles CloudFlare?
+
+Una solución **todo-en-uno** con interfaz web intuitiva para gestionar túneles CloudFlare Zero Trust en servidores Ubuntu. Esta herramienta, desarrollada por ATECA TECHLAB SOFTWARE, permite exponer servicios internos a Internet de forma segura y sin necesidad de configuraciones complejas.
 
 **Repositorio oficial:** [https://github.com/innovafpiesmmg/cloudflare](https://github.com/innovafpiesmmg/cloudflare)
 
-## Características
+### 💡 La forma más sencilla de gestionar tus túneles Zero Trust
 
-- ✅ Interfaz gráfica web completa en español
-- ✅ Instalación sencilla de CloudFlare Tunnel
-- ✅ Creación y gestión de túneles Zero Trust
-- ✅ Configuración de servicios para acceso a través de túneles
-- ✅ Monitorización del estado de los túneles con alertas automáticas
-- ✅ Gestión como servicios del sistema (systemd) 
-- ✅ No requiere Docker
-- ✅ Optimizado para entornos de producción
-- ✅ API de verificación de estado (health check)
+## ✨ Características
 
-## Requisitos
+<div class="row">
+  <div class="col-md-6">
+    <h3>🛠️ Instalación y Configuración</h3>
+    <ul>
+      <li>✅ Interfaz web moderna e intuitiva 100% en español</li>
+      <li>✅ Instalación automática de CloudFlared con feedback en tiempo real</li>
+      <li>✅ Creación de túneles con un solo clic</li>
+      <li>✅ Configuración visual sin necesidad de editar archivos manualmente</li>
+      <li>✅ No requiere Docker ni contenedores</li>
+    </ul>
+  </div>
+  <div class="col-md-6">
+    <h3>🔒 Seguridad y Rendimiento</h3>
+    <ul>
+      <li>✅ Integración con CloudFlare Zero Trust</li>
+      <li>✅ Opciones avanzadas de seguridad y configuración</li>
+      <li>✅ Gestión automática como servicios del sistema (systemd)</li>
+      <li>✅ Monitorización en tiempo real con alertas</li>
+      <li>✅ API de verificación de estado (health check)</li>
+    </ul>
+  </div>
+</div>
 
-- Servidor Ubuntu (16.04+)
-- Python 3.6+
-- Permisos de administrador (sudo/root)
-- Conexión a Internet
-- Cuenta en CloudFlare con un dominio configurado
+<p align="center">
+  <strong>🌟 Diseñado para funcionar en cualquier servidor Ubuntu, incluso recién instalado</strong>
+</p>
 
-## Instalación rápida
+## 📋 Requisitos
 
-```bash
-# Descargar script de instalación desde el repositorio oficial
-curl -L -o install.sh https://raw.githubusercontent.com/innovafpiesmmg/cloudflare/main/install.sh
+- **Sistema:** Servidor Ubuntu 16.04 o superior
+- **Permisos:** Acceso de administrador (sudo/root)
+- **Red:** Conexión a Internet activa
+- **Cuenta:** CloudFlare con un dominio configurado
 
-# Dar permisos de ejecución
-chmod +x install.sh
+> **¡No se preocupe por otras dependencias!** El script de instalación se encarga de todas ellas automáticamente.
 
-# Ejecutar como root o con sudo
-sudo ./install.sh
-```
+## 🚀 Instalación en 3 sencillos pasos
 
-La instalación configurará automáticamente:
-- Actualiza el sistema y repositorios
-- Instala todas las dependencias necesarias (Python, librerías, herramientas)
-- Configura la aplicación web en el puerto 5000
-- Configura servicios systemd para arranque automático
-- Instala el sistema de monitoreo y alertas
-- Configura los permisos necesarios para el funcionamiento seguro
+<div class="installation-steps">
+  <div class="step">
+    <h3>1️⃣ Descargar</h3>
+    <pre><code>curl -L -o install.sh https://raw.githubusercontent.com/innovafpiesmmg/cloudflare/main/install.sh</code></pre>
+    <p>Descarga el script de instalación desde nuestro repositorio oficial</p>
+  </div>
+  
+  <div class="step">
+    <h3>2️⃣ Permiso de ejecución</h3>
+    <pre><code>chmod +x install.sh</code></pre>
+    <p>Otorga permisos de ejecución al script de instalación</p>
+  </div>
+  
+  <div class="step">
+    <h3>3️⃣ Ejecutar</h3>
+    <pre><code>sudo ./install.sh</code></pre>
+    <p>El instalador se encarga de todo automáticamente</p>
+  </div>
+</div>
 
-El script está diseñado para funcionar incluso en servidores Ubuntu recién instalados con configuración mínima.
+<div class="alert alert-success">
+  <p>✅ <strong>El instalador configura automáticamente:</strong></p>
+  <ul>
+    <li>⚙️ Actualización del sistema y repositorios</li>
+    <li>📦 Instalación de todas las dependencias necesarias</li>
+    <li>🔌 Configuración de la aplicación web en el puerto 5000</li>
+    <li>🔄 Servicios systemd para arranque automático</li>
+    <li>📊 Sistema de monitoreo y alertas</li>
+    <li>🔐 Permisos necesarios para un funcionamiento seguro</li>
+  </ul>
+</div>
+
+<p align="center">
+  <em>El script está optimizado para funcionar incluso en servidores Ubuntu recién instalados con configuración mínima</em>
+</p>
 
 ## Configuración para producción
 
@@ -236,16 +278,36 @@ pip install -r requirements.txt
 systemctl restart gestor-tuneles-cloudflare
 ```
 
-## Soporte y Contribuciones
+## 🤝 Soporte y Comunidad
 
-Para obtener ayuda o contribuir al proyecto:
+<div class="community-section">
+  <div class="support-channels">
+    <h3>📣 Canales de soporte</h3>
+    <ul>
+      <li>🐞 <a href="https://github.com/innovafpiesmmg/cloudflare/issues">Reportar un problema</a></li>
+      <li>🔧 <a href="https://github.com/innovafpiesmmg/cloudflare/pulls">Enviar una mejora</a></li>
+      <li>📚 <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/">Documentación oficial de CloudFlare Zero Trust</a></li>
+    </ul>
+  </div>
 
-- Reportar problemas: [Abrir un Issue](https://github.com/innovafpiesmmg/cloudflare/issues)
-- Enviar mejoras: [Pull Request](https://github.com/innovafpiesmmg/cloudflare/pulls)
-- Documentación de CloudFlare: [CloudFlare Zero Trust](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
+  <div class="contribution">
+    <h3>👨‍💻 ¿Cómo contribuir?</h3>
+    <ol>
+      <li>Haz un fork del repositorio</li>
+      <li>Crea una rama para tu funcionalidad (<code>git checkout -b nueva-funcionalidad</code>)</li>
+      <li>Haz commit de tus cambios (<code>git commit -m 'Añade nueva funcionalidad'</code>)</li>
+      <li>Sube tu rama (<code>git push origin nueva-funcionalidad</code>)</li>
+      <li>Abre un Pull Request</li>
+    </ol>
+  </div>
+</div>
 
-## Licencia
+---
 
-Este proyecto está desarrollado por [ATECA TECHLAB SOFTWARE](https://ateca.es) y publicado como software de código abierto bajo la Licencia MIT.
-
-© 2023-2025 ATECA TECHLAB SOFTWARE
+<div align="center">
+  <img src="https://github.com/innovafpiesmmg/cloudflare/raw/main/static/img/ateca-techlab-new-logo.png" alt="ATECA TECHLAB SOFTWARE" width="200"/>
+  
+  <p>Este proyecto está desarrollado por <a href="https://ateca.es">ATECA TECHLAB SOFTWARE</a><br>y publicado como software de código abierto bajo la <strong>Licencia MIT</strong>.</p>
+  
+  <p>© 2023-2025 ATECA TECHLAB SOFTWARE</p>
+</div>
