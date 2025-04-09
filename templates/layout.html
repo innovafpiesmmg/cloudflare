@@ -15,10 +15,11 @@
 </head>
 <body>
     <!-- Barra de navegación -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark app-header">
+    <nav class="navbar navbar-expand-lg navbar-dark app-header">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fa-solid fa-cloud"></i> CloudFlare Tunnel Manager
+                <img src="{{ url_for('static', filename='img/ateca-techlab-logo.png') }}" alt="ATECA TECHLAB SOFTWARE" class="navbar-brand-logo">
+                CloudFlare Tunnel Manager
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -80,13 +81,19 @@
     </div>
 
     <!-- Pie de página -->
-    <footer class="footer bg-dark text-light">
+    <footer class="footer text-light">
         <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <p>&copy; 2023 CloudFlare Tunnel Manager</p>
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <p class="mb-0">
+                        <img src="{{ url_for('static', filename='img/ateca-techlab-logo.png') }}" alt="ATECA TECHLAB SOFTWARE" height="24" class="me-2">
+                        &copy; 2025 ATECA TECHLAB SOFTWARE
+                    </p>
                 </div>
-                <div class="col-md-6 text-md-end">
+                <div class="col-md-4 text-center">
+                    <p class="mb-0">CloudFlare Tunnel Manager</p>
+                </div>
+                <div class="col-md-4 text-md-end">
                     <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/" class="text-light" target="_blank">
                         Documentación de CloudFlare Tunnels
                     </a>
