@@ -212,13 +212,116 @@ def is_tunnel_running(tunnel_name):
         logger.error(f"Error al verificar estado del túnel {tunnel_name}: {str(e)}")
         return False
 
+def ensure_origin_certificate():
+    """
+    Verifica y genera el certificado de origen si no existe.
+    Este certificado es necesario para crear y gestionar túneles.
+    """
+    try:
+        # Primero verificamos si hay certificado existente
+        cert_paths = [
+            os.path.expanduser("~/.cloudflared/cert.pem"),
+            "/etc/cloudflared/cert.pem",
+            "/usr/local/etc/cloudflared/cert.pem"
+        ]
+        
+        for cert_path in cert_paths:
+            if os.path.exists(cert_path):
+                logger.info(f"Certificado de origen encontrado en: {cert_path}")
+                return {"success": True, "cert_path": cert_path}
+        
+        # No hay certificado, debemos generarlo
+        logger.info("No se encontró certificado de origen. Generando uno nuevo...")
+        
+        # Intentar usar el directorio HOME primero
+        cert_dir = os.path.expanduser("~/.cloudflared")
+        os.makedirs(cert_dir, exist_ok=True)
+        
+        # Verificar si hay autenticación configurada en cloudflare_auth
+        from utils.cloudflare_auth import is_cloudflare_configured, get_cloudflare_credentials
+        
+        if is_cloudflare_configured():
+            credentials = get_cloudflare_credentials()
+            # Intentar autenticar y generar el certificado
+            logger.info("Usando credenciales de Cloudflare para generar el certificado...")
+            
+            # Crear archivo de configuración temporal para login
+            temp_config = "/tmp/cloudflared_login.json"
+            
+            # Asegurarnos de que credentials no es None
+            if credentials and isinstance(credentials, dict):
+                with open(temp_config, 'w') as f:
+                    json.dump({
+                        "api-token": credentials.get('api_key', ''),
+                        "email": credentials.get('email', '')
+                    }, f)
+            else:
+                logger.error("Credenciales no válidas")
+                return {"success": False, "error": "Credenciales no válidas"}
+            
+            # Ejecutar login
+            login_result = subprocess.run(
+                ["cloudflared", "tunnel", "login", "--credentials-file", temp_config],
+                capture_output=True, text=True
+            )
+            
+            # Limpiar archivo temporal
+            if os.path.exists(temp_config):
+                os.unlink(temp_config)
+                
+            if login_result.returncode != 0:
+                logger.error(f"Error al autenticar con Cloudflare: {login_result.stderr}")
+                # Intentar método interactivo como respaldo
+                logger.info("Intentando método de autenticación interactivo...")
+                interactive_result = subprocess.run(
+                    ["cloudflared", "tunnel", "login"],
+                    capture_output=True, text=True
+                )
+                if interactive_result.returncode != 0:
+                    logger.error(f"Error en autenticación interactiva: {interactive_result.stderr}")
+                    return {"success": False, "error": "No se pudo autenticar con Cloudflare para generar el certificado"}
+        else:
+            # Sin configuración, intentar método interactivo
+            logger.info("No hay credenciales configuradas. Intentando autenticación interactiva...")
+            interactive_result = subprocess.run(
+                ["cloudflared", "tunnel", "login"],
+                capture_output=True, text=True
+            )
+            if interactive_result.returncode != 0:
+                logger.error(f"Error en autenticación interactiva: {interactive_result.stderr}")
+                return {"success": False, "error": "No se pudo generar el certificado de origen mediante autenticación interactiva"}
+        
+        # Verificar si se generó el certificado
+        for cert_path in cert_paths:
+            if os.path.exists(cert_path):
+                logger.info(f"Certificado generado correctamente en: {cert_path}")
+                return {"success": True, "cert_path": cert_path}
+        
+        logger.error("No se pudo encontrar el certificado después de la autenticación")
+        return {"success": False, "error": "No se pudo generar el certificado de origen"}
+    except Exception as e:
+        logger.error(f"Error al verificar/generar certificado de origen: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
 def create_tunnel(tunnel_name):
     """Crear un nuevo túnel"""
     try:
+        # Primero verificamos/generamos el certificado de origen
+        cert_result = ensure_origin_certificate()
+        if not cert_result["success"]:
+            logger.error(f"Error con el certificado de origen: {cert_result.get('error')}")
+            return {"success": False, "error": f"Error con el certificado de origen: {cert_result.get('error')}"}
+        
+        # Variables de entorno para el comando
+        env = os.environ.copy()
+        if cert_result.get("cert_path"):
+            env["TUNNEL_ORIGIN_CERT"] = cert_result.get("cert_path")
+        
         # Crear el túnel
         result = subprocess.run(
             ["cloudflared", "tunnel", "create", tunnel_name],
-            capture_output=True, text=True
+            capture_output=True, text=True, env=env
         )
         
         if result.returncode != 0:
@@ -236,7 +339,7 @@ def create_tunnel(tunnel_name):
         # Obtener el token del túnel
         token_result = subprocess.run(
             ["cloudflared", "tunnel", "token", "--id", tunnel_id],
-            capture_output=True, text=True
+            capture_output=True, text=True, env=env
         )
         
         if token_result.returncode != 0:
@@ -300,10 +403,21 @@ def get_tunnel_status(tunnel_name):
 def start_tunnel(tunnel_name):
     """Iniciar un túnel"""
     try:
+        # Primero verificamos/generamos el certificado de origen
+        cert_result = ensure_origin_certificate()
+        if not cert_result["success"]:
+            logger.error(f"Error con el certificado de origen: {cert_result.get('error')}")
+            return {"success": False, "error": f"Error con el certificado de origen: {cert_result.get('error')}"}
+            
+        # Variables de entorno para el comando
+        env = os.environ.copy()
+        if cert_result.get("cert_path"):
+            env["TUNNEL_ORIGIN_CERT"] = cert_result.get("cert_path")
+            
         # Comprobar si existe un servicio systemd para este túnel
         service_path = f"{SYSTEMD_DIR}/cloudflared-{tunnel_name}.service"
         if os.path.exists(service_path):
-            # Iniciar el servicio
+            # Iniciar el servicio (systemd maneja las variables de entorno en el .service)
             result = subprocess.run(
                 ["sudo", "systemctl", "start", f"cloudflared-{tunnel_name}"],
                 capture_output=True, text=True
@@ -316,7 +430,7 @@ def start_tunnel(tunnel_name):
             # Ejecutar en segundo plano
             result = subprocess.run(
                 ["cloudflared", "tunnel", "run", tunnel_name],
-                capture_output=True, text=True
+                capture_output=True, text=True, env=env
             )
             
             if result.returncode != 0:
