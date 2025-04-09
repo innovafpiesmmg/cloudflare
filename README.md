@@ -3,7 +3,7 @@
 <div align="center">
   <img src="https://github.com/innovafpiesmmg/cloudflare/raw/main/static/img/logo.png" alt="ATECA TECHLAB SOFTWARE" width="300"/>
   
-  ![Version](https://img.shields.io/badge/Versión-1.6-blue)
+  ![Version](https://img.shields.io/badge/Versión-1.7-blue)
   ![Plataforma](https://img.shields.io/badge/Plataforma-Ubuntu-purple)
   ![Idioma](https://img.shields.io/badge/Idioma-Español-green)
   ![CloudFlare](https://img.shields.io/badge/CloudFlare-Zero_Trust-orange)
@@ -18,18 +18,19 @@ Una solución **todo-en-uno** con interfaz web intuitiva para gestionar túneles
 
 ### 💡 La forma más sencilla de gestionar tus túneles Zero Trust
 
-## ✨ Características
+## ✨ Características (v1.7)
 
 <div class="row">
   <div class="col-md-6">
     <h3>🛠️ Instalación y Configuración</h3>
     <ul>
       <li>✅ Interfaz web moderna e intuitiva 100% en español</li>
-      <li>✅ Instalación automática de CloudFlared con feedback en tiempo real</li>
+      <li>✅ Instalación automática y manual de CloudFlared con feedback en tiempo real</li>
       <li>✅ Creación de túneles con un solo clic</li>
       <li>✅ Configuración visual sin necesidad de editar archivos manualmente</li>
       <li>✅ No requiere Docker ni contenedores</li>
       <li>✅ Configuración de API de Cloudflare durante la instalación</li>
+      <li>✅ Opción de instalación manual mediante repositorio oficial de Cloudflare</li>
     </ul>
   </div>
   <div class="col-md-6">
@@ -267,7 +268,16 @@ Si encuentra problemas durante la instalación, revise los siguientes casos comu
    ```
 
 3. **Error al instalar cloudflared automáticamente**:
-   Si el instalador no puede instalar cloudflared correctamente, puede usar el script de instalación manual incluido:
+   Si el instalador no puede instalar cloudflared correctamente, puede usar el método de instalación manual:
+   
+   **Opción 1: Usar la interfaz gráfica (recomendado)**
+   Una vez instalada la aplicación, puedes acceder a la página de instalación y usar el botón verde "Instalación Manual" que usa el repositorio oficial de Cloudflare.
+   ```bash
+   # Acceder a la página de instalación
+   http://tu-servidor:5000/instalacion
+   ```
+   
+   **Opción 2: Usar el script de instalación manual incluido**
    ```bash
    # Dar permisos de ejecución al script
    chmod +x install_cloudflared.sh
@@ -276,7 +286,7 @@ Si encuentra problemas durante la instalación, revise los siguientes casos comu
    sudo ./install_cloudflared.sh
    ```
    
-   O instalar manualmente siguiendo estos pasos:
+   **Opción 3: Instalar manualmente desde la línea de comandos**
    ```bash
    # Añadir la clave GPG de Cloudflare
    sudo mkdir -p --mode=0755 /usr/share/keyrings
