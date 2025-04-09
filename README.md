@@ -1,10 +1,13 @@
 # Gestor de Túneles CloudFlare
 
 ![Gestor de Túneles CloudFlare](https://img.shields.io/badge/CloudFlare-Gestor%20de%20Túneles-orange)
-![Version](https://img.shields.io/badge/Versión-1.0-blue)
+![Version](https://img.shields.io/badge/Versión-1.2-blue)
 ![Idioma](https://img.shields.io/badge/Idioma-Español-green)
+![Plataforma](https://img.shields.io/badge/Plataforma-Ubuntu-purple)
 
-Una aplicación web para instalar, configurar y gestionar túneles CloudFlare Zero Trust en servidores Ubuntu sin Docker.
+Una interfaz gráfica web en español para instalar y configurar túneles CloudFlare Zero Trust en servidores Ubuntu sin Docker, desarrollada por ATECA TECHLAB SOFTWARE. Esta aplicación permite acceder a distintos servicios alojados en el servidor mediante túneles, proporcionando una gestión completa y monitorización avanzada.
+
+**Repositorio oficial:** [https://github.com/innovafpiesmmg/cloudflare](https://github.com/innovafpiesmmg/cloudflare)
 
 ## Características
 
@@ -12,9 +15,11 @@ Una aplicación web para instalar, configurar y gestionar túneles CloudFlare Ze
 - ✅ Instalación sencilla de CloudFlare Tunnel
 - ✅ Creación y gestión de túneles Zero Trust
 - ✅ Configuración de servicios para acceso a través de túneles
-- ✅ Monitorización del estado de los túneles
-- ✅ Gestión como servicios del sistema (systemd)
+- ✅ Monitorización del estado de los túneles con alertas automáticas
+- ✅ Gestión como servicios del sistema (systemd) 
 - ✅ No requiere Docker
+- ✅ Optimizado para entornos de producción
+- ✅ API de verificación de estado (health check)
 
 ## Requisitos
 
@@ -27,7 +32,7 @@ Una aplicación web para instalar, configurar y gestionar túneles CloudFlare Ze
 ## Instalación rápida
 
 ```bash
-# Descargar script de instalación
+# Descargar script de instalación desde el repositorio oficial
 curl -L -o install.sh https://raw.githubusercontent.com/innovafpiesmmg/cloudflare/main/install.sh
 
 # Dar permisos de ejecución
@@ -36,6 +41,12 @@ chmod +x install.sh
 # Ejecutar como root o con sudo
 sudo ./install.sh
 ```
+
+La instalación configurará automáticamente:
+- La aplicación web en el puerto 5000
+- Un servicio systemd para el arranque automático
+- El sistema de monitoreo y alertas
+- Los permisos necesarios para el funcionamiento seguro
 
 ## Configuración para producción
 
@@ -99,16 +110,73 @@ ExecStart=
 ExecStart=/opt/gestor-tuneles-cloudflare/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 main:app
 ```
 
-### 3. Monitoreo del servicio
+### 3. Sistema de Monitoreo y Alertas
 
-Configurar monitoreo básico:
+La aplicación incluye un avanzado sistema de monitoreo que verifica automáticamente el estado de los túneles y envía alertas por correo electrónico cuando detecta problemas:
 
 ```bash
-# Instalar herramientas de monitoreo
-sudo apt-get install -y prometheus-node-exporter
+# Verificar estado del servicio de monitoreo
+sudo systemctl status cloudflare-monitor
 
-# Verificar logs regularmente
-echo "0 */6 * * * root journalctl -u gestor-tuneles-cloudflare --since '6 hours ago' | grep -i error | mail -s 'Alerta: Errores en Gestor de Túneles CloudFlare' tu-email@ejemplo.com" > /etc/cron.d/monitoreo-cloudflare
+# Logs del monitoreo
+sudo journalctl -u cloudflare-monitor -f
+```
+
+Para configurar las notificaciones por correo electrónico:
+
+1. Edite el archivo de configuración:
+```bash
+sudo nano /opt/gestor-tuneles-cloudflare/config/monitor_config.json
+```
+
+2. Configure los parámetros SMTP y activación:
+```json
+{
+    "email_notifications": true,
+    "smtp_server": "smtp.tuempresa.com",
+    "smtp_port": 587,
+    "smtp_user": "usuario@tuempresa.com",
+    "smtp_password": "contraseña_segura",
+    "notification_email": "admin@tuempresa.com",
+    "from_email": "alertas@tuempresa.com",
+    "check_interval_seconds": 300
+}
+```
+
+3. Reinicie el servicio de monitoreo:
+```bash
+sudo systemctl restart cloudflare-monitor
+```
+
+### 4. API de Verificación de Estado (Health Check)
+
+La aplicación proporciona un endpoint para verificar el estado del sistema:
+
+```bash
+# Verificar estado general
+curl http://localhost:5000/health
+
+# Obtener estadísticas detalladas del sistema
+curl http://localhost:5000/api/system/stats
+```
+
+Este endpoint puede utilizarse con sistemas de monitoreo externos como Nagios, Zabbix o Prometheus.
+
+## Repositorio y Actualizaciones
+
+El código fuente oficial se encuentra en:
+- [GitHub: innovafpiesmmg/cloudflare](https://github.com/innovafpiesmmg/cloudflare)
+
+Para actualizar a la última versión:
+```bash
+# Descargar el script de actualización
+curl -L -o update.sh https://raw.githubusercontent.com/innovafpiesmmg/cloudflare/main/update.sh
+
+# Dar permisos de ejecución
+chmod +x update.sh
+
+# Ejecutar como root o con sudo
+sudo ./update.sh
 ```
 
 ## Soporte y Contribuciones
@@ -116,8 +184,11 @@ echo "0 */6 * * * root journalctl -u gestor-tuneles-cloudflare --since '6 hours 
 Para obtener ayuda o contribuir al proyecto:
 
 - Reportar problemas: [Abrir un Issue](https://github.com/innovafpiesmmg/cloudflare/issues)
+- Enviar mejoras: [Pull Request](https://github.com/innovafpiesmmg/cloudflare/pulls)
 - Documentación de CloudFlare: [CloudFlare Zero Trust](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
 
 ## Licencia
 
-Este proyecto está desarrollado por [ATECA TECHLAB SOFTWARE](https://ateca.es) y publicado como software de código abierto.
+Este proyecto está desarrollado por [ATECA TECHLAB SOFTWARE](https://ateca.es) y publicado como software de código abierto bajo la Licencia MIT.
+
+© 2023-2025 ATECA TECHLAB SOFTWARE
