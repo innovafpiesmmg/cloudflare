@@ -3,7 +3,7 @@ import os
 
 def generate_favicon():
     # Abrimos la imagen del logo
-    logo_path = 'static/img/ateca-techlab-new-logo.png'
+    logo_path = 'static/img/ateca-favicon-logo.png'
     if not os.path.exists(logo_path):
         print(f"Error: No se pudo encontrar el archivo {logo_path}")
         return

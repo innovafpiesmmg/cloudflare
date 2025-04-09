@@ -41,7 +41,7 @@ if [ ! -f /etc/lsb-release ] || ! grep -q "Ubuntu" /etc/lsb-release; then
 fi
 
 # Directorio donde se instalará la aplicación
-INSTALL_DIR="/opt/cloudflare-tunnel-manager"
+INSTALL_DIR="/opt/gestor-tuneles-cloudflare"
 
 # Crear directorio de instalación
 print_status "Creando directorio de instalación en $INSTALL_DIR"
@@ -67,7 +67,7 @@ source venv/bin/activate
 # Clonar repositorio (asumimos que este script se ejecuta desde el repo o se descarga individualmente)
 if [ ! -d ".git" ]; then
     print_status "Clonando repositorio desde GitHub..."
-    git clone https://github.com/usuario/cloudflare-tunnel-manager.git temp
+    git clone https://github.com/innovafpiesmmg/cloudflare.git temp
     cp -r temp/* .
     cp -r temp/.* . 2>/dev/null
     rm -rf temp
@@ -75,27 +75,27 @@ fi
 
 # Instalar requisitos de Python
 print_status "Instalando requisitos de Python..."
-pip install flask pyyaml psutil requests
+pip install flask pyyaml psutil requests pillow gunicorn
 
 # Crear archivo de servicio systemd
-SERVICE_FILE="/etc/systemd/system/cloudflare-tunnel-manager.service"
+SERVICE_FILE="/etc/systemd/system/gestor-tuneles-cloudflare.service"
 print_status "Creando servicio systemd..."
 
 cat > $SERVICE_FILE << EOF
 [Unit]
-Description=CloudFlare Tunnel Manager
+Description=Gestor de Túneles CloudFlare
 After=network.target
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/venv/bin/python3 main.py
+ExecStart=$INSTALL_DIR/venv/bin/gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
 Restart=on-failure
 RestartSec=5s
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=cloudflare-tunnel-manager
+SyslogIdentifier=gestor-tuneles-cloudflare
 
 [Install]
 WantedBy=multi-user.target
@@ -106,27 +106,27 @@ systemctl daemon-reload
 
 # Habilitar e iniciar el servicio
 print_status "Habilitando e iniciando el servicio..."
-systemctl enable cloudflare-tunnel-manager
-systemctl start cloudflare-tunnel-manager
+systemctl enable gestor-tuneles-cloudflare
+systemctl start gestor-tuneles-cloudflare
 
 # Verificar si el servicio se inició correctamente
-if systemctl is-active --quiet cloudflare-tunnel-manager; then
+if systemctl is-active --quiet gestor-tuneles-cloudflare; then
     print_status "Servicio iniciado correctamente."
 else
     print_error "Error al iniciar el servicio. Verificando logs..."
-    journalctl -u cloudflare-tunnel-manager -n 20
+    journalctl -u gestor-tuneles-cloudflare -n 20
 fi
 
 # Mostrar información final
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 print_status "====================================================="
-print_status "  CloudFlare Tunnel Manager instalado correctamente  "
+print_status "  Gestor de Túneles CloudFlare instalado correctamente  "
 print_status "====================================================="
 print_status "Puedes acceder a la interfaz web en:"
 print_status "http://$IP_ADDRESS:5000"
 print_status ""
 print_status "Si encuentras algún problema, verifica los logs con:"
-print_status "journalctl -u cloudflare-tunnel-manager -f"
+print_status "journalctl -u gestor-tuneles-cloudflare -f"
 print_status "====================================================="
 
 exit 0
