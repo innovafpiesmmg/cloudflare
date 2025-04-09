@@ -266,7 +266,30 @@ Si encuentra problemas durante la instalación, revise los siguientes casos comu
    python3 -m pip install flask gunicorn
    ```
 
-3. **El servicio no inicia correctamente**:
+3. **Error al instalar cloudflared automáticamente**:
+   Si el instalador no puede instalar cloudflared correctamente, puede usar el script de instalación manual incluido:
+   ```bash
+   # Dar permisos de ejecución al script
+   chmod +x install_cloudflared.sh
+   
+   # Ejecutar el script como root
+   sudo ./install_cloudflared.sh
+   ```
+   
+   O instalar manualmente siguiendo estos pasos:
+   ```bash
+   # Añadir la clave GPG de Cloudflare
+   sudo mkdir -p --mode=0755 /usr/share/keyrings
+   curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+   
+   # Añadir el repositorio
+   echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list
+   
+   # Instalar cloudflared
+   sudo apt-get update && sudo apt-get install -y cloudflared
+   ```
+
+4. **El servicio no inicia correctamente**:
    ```bash
    # Verificar logs detallados
    journalctl -u gestor-tuneles-cloudflare -n 50
@@ -275,7 +298,7 @@ Si encuentra problemas durante la instalación, revise los siguientes casos comu
    ls -la /opt/gestor-tuneles-cloudflare/
    ```
 
-4. **Puerto 5000 ya en uso**:
+5. **Puerto 5000 ya en uso**:
    ```bash
    # Verificar qué está usando el puerto 5000
    lsof -i :5000
