@@ -3,7 +3,7 @@
 <div align="center">
   <img src="https://github.com/innovafpiesmmg/cloudflare/raw/main/static/img/logo.png" alt="ATECA TECHLAB SOFTWARE" width="300"/>
   
-  ![Version](https://img.shields.io/badge/Versión-1.5-blue)
+  ![Version](https://img.shields.io/badge/Versión-1.6-blue)
   ![Plataforma](https://img.shields.io/badge/Plataforma-Ubuntu-purple)
   ![Idioma](https://img.shields.io/badge/Idioma-Español-green)
   ![CloudFlare](https://img.shields.io/badge/CloudFlare-Zero_Trust-orange)
@@ -29,6 +29,7 @@ Una solución **todo-en-uno** con interfaz web intuitiva para gestionar túneles
       <li>✅ Creación de túneles con un solo clic</li>
       <li>✅ Configuración visual sin necesidad de editar archivos manualmente</li>
       <li>✅ No requiere Docker ni contenedores</li>
+      <li>✅ Configuración de API de Cloudflare durante la instalación</li>
     </ul>
   </div>
   <div class="col-md-6">
@@ -39,6 +40,7 @@ Una solución **todo-en-uno** con interfaz web intuitiva para gestionar túneles
       <li>✅ Gestión automática como servicios del sistema (systemd)</li>
       <li>✅ Monitorización en tiempo real con alertas</li>
       <li>✅ API de verificación de estado (health check)</li>
+      <li>✅ Almacenamiento seguro de credenciales de Cloudflare</li>
     </ul>
   </div>
 </div>
@@ -87,6 +89,7 @@ Una solución **todo-en-uno** con interfaz web intuitiva para gestionar túneles
     <li>🔄 Servicios systemd para arranque automático</li>
     <li>📊 Sistema de monitoreo y alertas</li>
     <li>🔐 Permisos necesarios para un funcionamiento seguro</li>
+    <li>🔑 Opción para configurar la API key de Cloudflare durante la instalación</li>
   </ul>
 </div>
 
@@ -207,6 +210,21 @@ curl http://localhost:5000/api/system/stats
 ```
 
 Este endpoint puede utilizarse con sistemas de monitoreo externos como Nagios, Zabbix o Prometheus.
+
+### 5. Configuración de API de Cloudflare
+
+Durante la instalación, el script ofrece la opción de configurar las credenciales de Cloudflare. También puedes configurarlas posteriormente desde la interfaz web:
+
+```bash
+# Acceder a la página de configuración de Cloudflare
+http://tu-servidor:5000/configurar-cloudflare
+```
+
+La configuración de Cloudflare te permite:
+- Autenticar automáticamente con la API de Cloudflare
+- Crear túneles vinculados a tu cuenta
+- Configurar dominios para tus servicios
+- Gestionar el acceso Zero Trust
 
 ## Repositorio y Actualizaciones
 
